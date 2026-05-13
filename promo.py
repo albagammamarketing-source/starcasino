@@ -26,7 +26,7 @@ DB_PORT = int(os.getenv("PIPELINE_DB_PORT", "3306"))
 
 DB_CONFIG = {
     "user": os.getenv("PIPELINE_DB_USER", "dbalba11"),
-    "password": os.getenv("PIPELINE_DB_PASSWORD", "Albagamma2024$"),
+    "password": os.getenv("DB_PASSWORD"),
     "host": os.getenv("PIPELINE_DB_HOST", "194.163.157.255"),
     "database": "AnalisiTickets_STARCASINO",
 }
