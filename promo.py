@@ -182,6 +182,7 @@ def costruisci_query() -> tuple[str, list[object]]:
             tg.id_ticket,
             tg.cf,
             tg.nome_commerciale,
+            tg.num_conto,
             tg.num_eventi,
             tg.des_stato,
             tg.is_sistema,
@@ -228,6 +229,7 @@ def normalizza_output(df: pd.DataFrame) -> pd.DataFrame:
 
     colonne_testo = [
         "id_ticket",
+        "num_conto",
         "cf",
         "nome_commerciale",
         "des_stato",
@@ -408,6 +410,7 @@ def main() -> None:
     dettaglio_cols = [
         "id_ticket",
         "cf",
+        "num_conto",
         "nome_commerciale",
         "num_eventi",
         "des_stato",
@@ -430,6 +433,7 @@ def main() -> None:
             [
                 "id_ticket",
                 "cf",
+                "num_conto",
                 "nome_commerciale",
                 "data_ora_vend",
                 "importo_pagato",
