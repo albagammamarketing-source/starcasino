@@ -7,7 +7,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("Estrazione CSV STARCASINO")
+st.title("Estrazioni Conti per promozione - STARCASINO")
 
 st.write("Inserisci i filtri e poi genera il CSV.")
 
