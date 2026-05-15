@@ -99,6 +99,7 @@ if st.button("Genera CSV"):
             colonne_ticket = [
                 "id_ticket",
                 "cf",
+                "num_conto",
                 "nome_commerciale",
                 "des_stato",
                 "data_ora_vend",
