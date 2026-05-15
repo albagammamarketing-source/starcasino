@@ -12,7 +12,7 @@ import pymysql
 # =========================================================
 # CONFIGURAZIONE PERCORSI
 # =========================================================
-BASE_PATH = Path(r"G:\Il mio Drive\progetti phyton\61_starcasino")
+BASE_PATH = Path("output")
 BASE_PATH.mkdir(parents=True, exist_ok=True)
 
 OUTPUT_CSV = BASE_PATH / "1_starcasino_ticket_cf_filtrati.csv"
@@ -35,34 +35,18 @@ DB_CONFIG = {
 # =========================================================
 # SETTING FILTRI
 # =========================================================
-
-# Estrae tutti i ticket venduti da questa data in poi
 DATA_VENDITA_DA = "2026-05-01 00:00:00"
-
-# None = prende tutti gli stati
 DES_STATO = None
-
-# 0 = ticket non sistema
-# 1 = sistemi
 IS_SISTEMA = 0
-
 COD_STATO_ESITO_ESCLUSO = None
 
-# Il ticket deve contenere ESATTAMENTE questi betradar_id.
-# L'ordine non conta.
-# Se metti 3 codici, cerca ticket con 3 eventi.
-# Se metti 4 codici, cerca ticket con 4 eventi.
 BETRADAR_ID_LIST = [
     "61526570",
     "61061655",
     "61624622",
 ]
 
-# Tutti gli eventi del ticket devono avere quota >= questa soglia.
-# Se vuoi disattivare il filtro, metti None.
 QUOTA_MIN_TUTTI_EVENTI = 1.5
-
-# Filtro opzionale CF singolo
 CF = None
 
 
@@ -139,12 +123,9 @@ def costruisci_query() -> tuple[str, list[object]]:
     if betradar_list:
         placeholders = ",".join(["%s"] * len(betradar_list))
 
-        # Il numero eventi del ticket deve essere uguale al numero di betradar_id indicati
         where_clauses.append("tg.num_eventi = %s")
         params.append(num_eventi_attesi)
 
-        # Il ticket deve contenere esattamente quei betradar_id, senza altri eventi fuori lista.
-        # L'ordine non conta.
         where_clauses.append(
             f"""
             tg.id_ticket IN (
@@ -180,9 +161,9 @@ def costruisci_query() -> tuple[str, list[object]]:
     query = f"""
         SELECT
             tg.id_ticket,
+            tg.num_conto,
             tg.cf,
             tg.nome_commerciale,
-            tg.num_conto,
             tg.num_eventi,
             tg.des_stato,
             tg.is_sistema,
@@ -347,6 +328,20 @@ def invia_email_con_allegati(
 # =========================================================
 # MAIN
 # =========================================================
+def crea_dataframe_ticket_vuoto() -> pd.DataFrame:
+    return pd.DataFrame(
+        columns=[
+            "id_ticket",
+            "num_conto",
+            "cf",
+            "nome_commerciale",
+            "data_ora_vend",
+            "importo_pagato",
+            "importo_vincita_potenziale",
+        ]
+    )
+
+
 def main() -> None:
     print("Estrazione dati STARCASINO")
     print(f"Database: {DB_CONFIG['database']}")
@@ -361,22 +356,8 @@ def main() -> None:
 
     if df.empty:
         print("Nessun dato trovato da database.")
-
-        ticket_vuoto = pd.DataFrame(
-            columns=[
-                "id_ticket",
-                "cf",
-                "nome_commerciale",
-                "data_ora_vend",
-                "importo_pagato",
-                "importo_vincita_potenziale",
-            ]
-        )
-
-        dettaglio_vuoto = pd.DataFrame()
-
-        salva_csv(ticket_vuoto, OUTPUT_CSV)
-        salva_csv(dettaglio_vuoto, OUTPUT_DETTAGLIO_CSV)
+        salva_csv(crea_dataframe_ticket_vuoto(), OUTPUT_CSV)
+        salva_csv(pd.DataFrame(), OUTPUT_DETTAGLIO_CSV)
         return
 
     print(f"Righe lette da database: {len(df)}")
@@ -387,30 +368,16 @@ def main() -> None:
 
     if df.empty:
         print("Nessun ticket valido dopo filtro quota minima su tutti gli eventi.")
-
-        ticket_vuoto = pd.DataFrame(
-            columns=[
-                "id_ticket",
-                "cf",
-                "nome_commerciale",
-                "data_ora_vend",
-                "importo_pagato",
-                "importo_vincita_potenziale",
-            ]
-        )
-
-        dettaglio_vuoto = pd.DataFrame()
-
-        salva_csv(ticket_vuoto, OUTPUT_CSV)
-        salva_csv(dettaglio_vuoto, OUTPUT_DETTAGLIO_CSV)
+        salva_csv(crea_dataframe_ticket_vuoto(), OUTPUT_CSV)
+        salva_csv(pd.DataFrame(), OUTPUT_DETTAGLIO_CSV)
         return
 
     print(f"Ticket unici dopo filtro quota: {df['id_ticket'].nunique()}")
 
     dettaglio_cols = [
         "id_ticket",
-        "cf",
         "num_conto",
+        "cf",
         "nome_commerciale",
         "num_eventi",
         "des_stato",
@@ -432,8 +399,8 @@ def main() -> None:
         df[
             [
                 "id_ticket",
-                "cf",
                 "num_conto",
+                "cf",
                 "nome_commerciale",
                 "data_ora_vend",
                 "importo_pagato",
