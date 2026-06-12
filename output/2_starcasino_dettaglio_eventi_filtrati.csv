@@ -1,4 +1,4 @@
-﻿id_ticket;num_conto;cf;nome_commerciale;num_eventi;des_stato;is_sistema;data_ora_vend;betradar_id;des_sport;des_manif;des_scom;des_eve;quota_evento;importo_pagato;importo_vincita_potenziale
+﻿id_ticket;num_conto;cf;nome_commerciale;num_eventi;des_stato;is_sistema;data_ora_vend;betradar_id;des_sport;des_manif;Mercato;des_eve;quota_evento;Importo Giocato;Importo Vincita Potenziale
 DF07EA050A3028B91006;15230-1703373;DNILRD94D06A662E;WWW.STARCASINO.IT;3;DA NON PAGARE;0;20260509 23:20:02;61526570;CALCIO;FRANCIA - I DIVISIONE;U/O INFO1 SQ. INFO2 - INFO3°T;Over;2,27;10,0;80,81
 DF07EA050A3028B91006;15230-1703373;DNILRD94D06A662E;WWW.STARCASINO.IT;3;DA NON PAGARE;0;20260509 23:20:02;61061655;CALCIO;ITALIA - I DIVISIONE;MULTIGOAL CASA;Si;2,0;10,0;80,81
 DF07EA050A3028B91006;15230-1703373;DNILRD94D06A662E;WWW.STARCASINO.IT;3;DA NON PAGARE;0;20260509 23:20:02;61624622;CALCIO;SPAGNA - I DIVISIONE;MG INFO1-INFO2 CASA + MG INFO3-INFO4 OSP;Si;1,78;10,0;80,81
