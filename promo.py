@@ -174,7 +174,27 @@ def costruisci_query() -> tuple[str, list[object]]:
 
         if des_scom_list:
             placeholders = ",".join(["%s"] * len(des_scom_list))
-            where_clauses.append(f"td.des_scom IN ({placeholders})")
+
+            # IMPORTANTE:
+            # Il filtro mercato deve essere applicato a livello di ticket, non solo di riga.
+            # Così vengono accettati solo ticket composti interamente dallo stesso des_scom
+            # inserito nel form.
+            #
+            # Se nel form vengono inseriti più mercati separati da virgola, il ticket è valido
+            # solo se contiene UN SOLO mercato distinto e quel mercato è tra quelli indicati.
+            where_clauses.append(
+                f"""
+                tg.id_ticket IN (
+                    SELECT td_scom.id_ticket
+                    FROM Ticket_Detail td_scom
+                    GROUP BY td_scom.id_ticket
+                    HAVING
+                        COUNT(DISTINCT TRIM(COALESCE(td_scom.des_scom, ''))) = 1
+                        AND MAX(TRIM(COALESCE(td_scom.des_scom, ''))) IN ({placeholders})
+                )
+                """
+            )
+
             params.extend(des_scom_list)
 
     where_sql = "\n        AND ".join(where_clauses)
