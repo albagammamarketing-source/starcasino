@@ -60,12 +60,8 @@ cf_input = st.text_input(
     value=""
 )
 
-# =========================================================
-# NUOVI FILTRI
-# =========================================================
-
 mercato_input = st.text_input(
-    "Mercato opzionale - des_scom, esempio 1X2",
+    "Mercato opzionale - des_scom, separa più valori con virgola",
     value=""
 )
 
@@ -110,12 +106,22 @@ if st.button("Genera CSV"):
         st.error("Devi inserire almeno un betradar_id.")
         st.stop()
 
-    # Passo i valori inseriti dall'interfaccia a promo.py
+    mercato_list = [
+        x.strip()
+        for x in mercato_input.split(",")
+        if x.strip()
+    ]
+
+    # =====================================================
+    # PASSAGGIO FILTRI A promo.py
+    # =====================================================
+
     promo.DATA_VENDITA_DA = data_vendita_da_str
     promo.BETRADAR_ID_LIST = betradar_list
     promo.QUOTA_MIN_TUTTI_EVENTI = float(quota_min)
     promo.IS_SISTEMA = int(is_sistema)
     promo.CF = cf_input.strip().upper() if cf_input.strip() else None
+    promo.DES_SCOM_LIST = mercato_list if mercato_list else None
 
     st.info("Estrazione dati in corso...")
 
@@ -124,12 +130,10 @@ if st.button("Genera CSV"):
     st.write(f"Numero eventi richiesto: {len(betradar_list)}")
     st.write(f"Quota minima: {promo.QUOTA_MIN_TUTTI_EVENTI}")
     st.write(f"is_sistema: {promo.IS_SISTEMA}")
+    st.write(f"Mercato: {promo.DES_SCOM_LIST if promo.DES_SCOM_LIST else 'TUTTI'}")
 
     if promo.CF:
         st.write(f"CF filtrato: {promo.CF}")
-
-    if mercato_input.strip():
-        st.write(f"Mercato filtrato: {mercato_input.strip()}")
 
     if importo_giocato_min > 0:
         st.write(f"Importo Giocato minimo: {importo_giocato_min}")
@@ -171,27 +175,6 @@ if st.button("Genera CSV"):
         st.stop()
 
     # =====================================================
-    # FILTRO MERCATO
-    # =====================================================
-
-    if mercato_input.strip():
-        mercati_filtrati = [
-            x.strip().upper()
-            for x in mercato_input.split(",")
-            if x.strip()
-        ]
-
-        df["des_scom"] = df["des_scom"].fillna("").astype(str).str.strip()
-
-        df = df[
-            df["des_scom"].str.upper().isin(mercati_filtrati)
-        ].copy()
-
-        if df.empty:
-            st.warning("Nessun ticket trovato dopo il filtro Mercato.")
-            st.stop()
-
-    # =====================================================
     # FILTRO IMPORTO GIOCATO
     # =====================================================
 
@@ -229,10 +212,8 @@ if st.button("Genera CSV"):
     if colonne_mancanti:
         st.error("Mancano alcune colonne necessarie nel dataframe finale:")
         st.write(colonne_mancanti)
-
         st.write("Colonne disponibili nel dataframe:")
         st.write(list(df.columns))
-
         st.stop()
 
     ticket_cf = (
