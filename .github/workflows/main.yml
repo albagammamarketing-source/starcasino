@@ -47,9 +47,6 @@ jobs:
       - name: Commit output files
         run: |
           git pull
-
           git add output/
-
           git commit -m "Aggiornamento automatico CSV" || echo "Nessuna modifica"
-
           git push
