@@ -36,6 +36,7 @@ DB_CONFIG = {
 # SETTING FILTRI
 # =========================================================
 DATA_VENDITA_DA = "2026-05-01 00:00:00"
+
 DES_STATO = None
 IS_SISTEMA = 0
 COD_STATO_ESITO_ESCLUSO = None
@@ -48,6 +49,14 @@ BETRADAR_ID_LIST = [
 
 QUOTA_MIN_TUTTI_EVENTI = 1.5
 CF = None
+
+# Filtro settabile sul mercato / descrizione scommessa.
+# None = nessun filtro
+# Esempio singolo:
+# DES_SCOM_LIST = ["Vincente"]
+# Esempio multiplo:
+# DES_SCOM_LIST = ["Vincente", "Over/Under"]
+DES_SCOM_LIST = None
 
 
 # =========================================================
@@ -155,6 +164,18 @@ def costruisci_query() -> tuple[str, list[object]]:
     if filtro_cf:
         where_clauses.append("tg.cf = %s")
         params.append(filtro_cf)
+
+    if DES_SCOM_LIST:
+        des_scom_list = [
+            str(x).strip()
+            for x in DES_SCOM_LIST
+            if str(x).strip()
+        ]
+
+        if des_scom_list:
+            placeholders = ",".join(["%s"] * len(des_scom_list))
+            where_clauses.append(f"td.des_scom IN ({placeholders})")
+            params.extend(des_scom_list)
 
     where_sql = "\n        AND ".join(where_clauses)
 
@@ -338,7 +359,30 @@ def crea_dataframe_ticket_vuoto() -> pd.DataFrame:
             "data_ora_vend",
             "Mercato",
             "Importo Giocato",
-            "importo_vincita_potenziale",
+            "Importo Vincita Potenziale",
+        ]
+    )
+
+
+def crea_dataframe_dettaglio_vuoto() -> pd.DataFrame:
+    return pd.DataFrame(
+        columns=[
+            "id_ticket",
+            "num_conto",
+            "cf",
+            "nome_commerciale",
+            "num_eventi",
+            "des_stato",
+            "is_sistema",
+            "data_ora_vend",
+            "betradar_id",
+            "des_sport",
+            "des_manif",
+            "Mercato",
+            "des_eve",
+            "quota_evento",
+            "Importo Giocato",
+            "Importo Vincita Potenziale",
         ]
     )
 
@@ -352,13 +396,14 @@ def main() -> None:
     print(f"Betradar_id richiesti: {BETRADAR_ID_LIST}")
     print(f"Numero eventi richiesto: {len(BETRADAR_ID_LIST)}")
     print(f"Quota minima su tutti gli eventi: {QUOTA_MIN_TUTTI_EVENTI}")
+    print(f"Filtro des_scom: {DES_SCOM_LIST if DES_SCOM_LIST else 'TUTTI'}")
 
     df = estrai_dati()
 
     if df.empty:
         print("Nessun dato trovato da database.")
         salva_csv(crea_dataframe_ticket_vuoto(), OUTPUT_CSV)
-        salva_csv(pd.DataFrame(), OUTPUT_DETTAGLIO_CSV)
+        salva_csv(crea_dataframe_dettaglio_vuoto(), OUTPUT_DETTAGLIO_CSV)
         return
 
     print(f"Righe lette da database: {len(df)}")
@@ -370,7 +415,7 @@ def main() -> None:
     if df.empty:
         print("Nessun ticket valido dopo filtro quota minima su tutti gli eventi.")
         salva_csv(crea_dataframe_ticket_vuoto(), OUTPUT_CSV)
-        salva_csv(pd.DataFrame(), OUTPUT_DETTAGLIO_CSV)
+        salva_csv(crea_dataframe_dettaglio_vuoto(), OUTPUT_DETTAGLIO_CSV)
         return
 
     print(f"Ticket unici dopo filtro quota: {df['id_ticket'].nunique()}")
@@ -442,7 +487,8 @@ def main() -> None:
             f"Filtro is_sistema: {IS_SISTEMA}\n"
             f"Betradar_id richiesti: {BETRADAR_ID_LIST}\n"
             f"Numero eventi richiesto: {len(BETRADAR_ID_LIST)}\n"
-            f"Quota minima tutti eventi: {QUOTA_MIN_TUTTI_EVENTI}\n\n"
+            f"Quota minima tutti eventi: {QUOTA_MIN_TUTTI_EVENTI}\n"
+            f"Filtro des_scom: {DES_SCOM_LIST if DES_SCOM_LIST else 'TUTTI'}\n\n"
             "Script automatico."
         ),
         allegati=[OUTPUT_CSV, OUTPUT_DETTAGLIO_CSV],
