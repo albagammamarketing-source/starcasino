@@ -336,7 +336,8 @@ def crea_dataframe_ticket_vuoto() -> pd.DataFrame:
             "cf",
             "nome_commerciale",
             "data_ora_vend",
-            "importo_pagato",
+            "Mercato",
+            "Importo Giocato",
             "importo_vincita_potenziale",
         ]
     )
@@ -395,22 +396,35 @@ def main() -> None:
 
     dettaglio = df[dettaglio_cols].copy()
 
+    dettaglio = dettaglio.rename(columns={
+        "des_scom": "Mercato",
+        "importo_pagato": "Importo Giocato",
+        "importo_vincita_potenziale": "Importo Vincita Potenziale",
+    })
+
+    ticket_cols = [
+        "id_ticket",
+        "num_conto",
+        "cf",
+        "nome_commerciale",
+        "data_ora_vend",
+        "des_scom",
+        "importo_pagato",
+        "importo_vincita_potenziale",
+    ]
+
     ticket_cf = (
-        df[
-            [
-                "id_ticket",
-                "num_conto",
-                "cf",
-                "nome_commerciale",
-                "data_ora_vend",
-                "importo_pagato",
-                "importo_vincita_potenziale",
-            ]
-        ]
+        df[ticket_cols]
         .drop_duplicates(subset=["id_ticket", "cf"])
         .sort_values(by=["cf", "id_ticket"])
         .reset_index(drop=True)
     )
+
+    ticket_cf = ticket_cf.rename(columns={
+        "des_scom": "Mercato",
+        "importo_pagato": "Importo Giocato",
+        "importo_vincita_potenziale": "Importo Vincita Potenziale",
+    })
 
     salva_csv(ticket_cf, OUTPUT_CSV)
     salva_csv(dettaglio, OUTPUT_DETTAGLIO_CSV)
