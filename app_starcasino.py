@@ -13,7 +13,7 @@ st.title("Estrazioni Conti per promozione - STARCASINO")
 st.write("Inserisci i filtri e poi genera il CSV.")
 
 st.info(
-    "Output CSV: id_ticket, cf, num_conto, nome_commerciale, des_stato, "
+    "La segente applicazione restitisce un file .csv con le seguenti informazioni: id_ticket, cf, num_conto, nome_commerciale, des_stato, "
     "data_ora_vend, Mercato, Importo Giocato, Importo Vincita Potenziale"
 )
 
