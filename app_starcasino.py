@@ -17,6 +17,12 @@ st.info(
     "data_ora_vend, Mercato, Importo Giocato, Importo Vincita Potenziale"
 )
 
+st.warning(
+    "Filtro mercato rigido: il CSV includerà solo ticket composti interamente "
+    "dallo stesso des_scom inserito nel campo Mercato. "
+    "Saranno esclusi i ticket che contengono anche altri mercati."
+)
+
 # =========================================================
 # INTERFACCIA FILTRI
 # =========================================================
@@ -61,8 +67,13 @@ cf_input = st.text_input(
 )
 
 mercato_input = st.text_input(
-    "Mercato opzionale - des_scom, separa più valori con virgola",
-    value=""
+    "Mercato obbligatorio - des_scom. Il ticket deve contenere solo questo mercato",
+    value="",
+    help=(
+        "Esempio: Vincente. "
+        "Se inserisci più valori separati da virgola, ogni ticket sarà comunque accettato "
+        "solo se contiene un unico des_scom distinto tra quelli indicati."
+    )
 )
 
 importo_giocato_min = st.number_input(
@@ -112,6 +123,13 @@ if st.button("Genera CSV"):
         if x.strip()
     ]
 
+    if not mercato_list:
+        st.error(
+            "Devi inserire almeno un mercato des_scom. "
+            "L'estrazione deve restituire solo ticket composti interamente da quel mercato."
+        )
+        st.stop()
+
     # =====================================================
     # PASSAGGIO FILTRI A promo.py
     # =====================================================
@@ -121,7 +139,7 @@ if st.button("Genera CSV"):
     promo.QUOTA_MIN_TUTTI_EVENTI = float(quota_min)
     promo.IS_SISTEMA = int(is_sistema)
     promo.CF = cf_input.strip().upper() if cf_input.strip() else None
-    promo.DES_SCOM_LIST = mercato_list if mercato_list else None
+    promo.DES_SCOM_LIST = mercato_list
 
     st.info("Estrazione dati in corso...")
 
@@ -130,7 +148,8 @@ if st.button("Genera CSV"):
     st.write(f"Numero eventi richiesto: {len(betradar_list)}")
     st.write(f"Quota minima: {promo.QUOTA_MIN_TUTTI_EVENTI}")
     st.write(f"is_sistema: {promo.IS_SISTEMA}")
-    st.write(f"Mercato: {promo.DES_SCOM_LIST if promo.DES_SCOM_LIST else 'TUTTI'}")
+    st.write(f"Mercato richiesto: {', '.join(mercato_list)}")
+    st.write("Regola mercato: solo ticket con un unico des_scom distinto, uguale a quello richiesto.")
 
     if promo.CF:
         st.write(f"CF filtrato: {promo.CF}")
@@ -157,6 +176,7 @@ if st.button("Genera CSV"):
         st.stop()
 
     st.success(f"Righe lette dal database: {len(df)}")
+    st.write(f"Ticket unici letti dal database: {df['id_ticket'].nunique()}")
 
     # =====================================================
     # NORMALIZZAZIONE E FILTRO QUOTA
@@ -172,6 +192,32 @@ if st.button("Genera CSV"):
 
     if df is None or df.empty:
         st.warning("Nessun ticket valido dopo il filtro quota.")
+        st.stop()
+
+    # =====================================================
+    # CONTROLLO SICUREZZA MERCATO
+    # =====================================================
+    # Questo controllo è ridondante rispetto a promo.py, ma utile per intercettare
+    # eventuali anomalie e mostrare un messaggio chiaro nell'app.
+
+    controllo_mercati = (
+        df.groupby("id_ticket")["des_scom"]
+        .nunique()
+        .reset_index(name="numero_mercati_distinti")
+    )
+
+    ticket_con_piu_mercati = controllo_mercati[
+        controllo_mercati["numero_mercati_distinti"] > 1
+    ]
+
+    if not ticket_con_piu_mercati.empty:
+        df = df[~df["id_ticket"].isin(ticket_con_piu_mercati["id_ticket"])].copy()
+        st.warning(
+            f"Esclusi {len(ticket_con_piu_mercati)} ticket perché contenevano più mercati des_scom."
+        )
+
+    if df.empty:
+        st.warning("Nessun ticket rimasto dopo il controllo sui mercati omogenei.")
         st.stop()
 
     # =====================================================
@@ -232,6 +278,7 @@ if st.button("Genera CSV"):
     st.success(f"Ticket trovati: {ticket_cf['id_ticket'].nunique()}")
     st.write(f"CF trovati: {ticket_cf['cf'].nunique()}")
     st.write(f"Punti vendita trovati: {ticket_cf['nome_commerciale'].nunique()}")
+    st.write(f"Mercati presenti nel risultato: {', '.join(sorted(ticket_cf['Mercato'].dropna().astype(str).unique()))}")
 
     st.dataframe(ticket_cf, use_container_width=True)
 
