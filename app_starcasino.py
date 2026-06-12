@@ -12,9 +12,15 @@ st.title("Estrazioni Conti per promozione - STARCASINO")
 
 st.write("Inserisci i filtri e poi genera il CSV.")
 
+st.info(
+    "Output CSV: id_ticket, cf, num_conto, nome_commerciale, des_stato, "
+    "data_ora_vend, Mercato, Importo Giocato, Importo Vincita Potenziale"
+)
+
 # =========================================================
 # INTERFACCIA FILTRI
 # =========================================================
+
 data_vendita_da = st.date_input(
     "Data vendita da",
     value=None,
@@ -35,13 +41,18 @@ quota_min = st.number_input(
     "Quota minima su tutti gli eventi",
     min_value=0.0,
     value=1.5,
-    step=0.1
+    step=0.1,
+    format="%.2f"
 )
 
 is_sistema = st.selectbox(
     "Tipo ticket",
     options=[0, 1],
-    format_func=lambda x: "Solo ticket singoli - is_sistema=0" if x == 0 else "Solo sistemi - is_sistema=1"
+    format_func=lambda x: (
+        "Solo ticket singoli - is_sistema=0"
+        if x == 0
+        else "Solo sistemi - is_sistema=1"
+    )
 )
 
 cf_input = st.text_input(
@@ -50,8 +61,34 @@ cf_input = st.text_input(
 )
 
 # =========================================================
+# NUOVI FILTRI
+# =========================================================
+
+mercato_input = st.text_input(
+    "Mercato opzionale - des_scom, esempio 1X2",
+    value=""
+)
+
+importo_giocato_min = st.number_input(
+    "Importo Giocato minimo opzionale",
+    min_value=0.0,
+    value=0.0,
+    step=1.0,
+    format="%.2f"
+)
+
+importo_giocato_max = st.number_input(
+    "Importo Giocato massimo opzionale - lascia 0 per non applicare limite massimo",
+    min_value=0.0,
+    value=0.0,
+    step=1.0,
+    format="%.2f"
+)
+
+# =========================================================
 # BOTTONE GENERA
 # =========================================================
+
 if st.button("Genera CSV"):
 
     if data_vendita_da is None:
@@ -81,8 +118,28 @@ if st.button("Genera CSV"):
     promo.CF = cf_input.strip().upper() if cf_input.strip() else None
 
     st.info("Estrazione dati in corso...")
+
     st.write(f"Data vendita da: {promo.DATA_VENDITA_DA}")
+    st.write(f"Betradar richiesti: {', '.join(betradar_list)}")
     st.write(f"Numero eventi richiesto: {len(betradar_list)}")
+    st.write(f"Quota minima: {promo.QUOTA_MIN_TUTTI_EVENTI}")
+    st.write(f"is_sistema: {promo.IS_SISTEMA}")
+
+    if promo.CF:
+        st.write(f"CF filtrato: {promo.CF}")
+
+    if mercato_input.strip():
+        st.write(f"Mercato filtrato: {mercato_input.strip()}")
+
+    if importo_giocato_min > 0:
+        st.write(f"Importo Giocato minimo: {importo_giocato_min}")
+
+    if importo_giocato_max > 0:
+        st.write(f"Importo Giocato massimo: {importo_giocato_max}")
+
+    # =====================================================
+    # ESTRAZIONE DATI
+    # =====================================================
 
     try:
         df = promo.estrai_dati()
@@ -97,6 +154,10 @@ if st.button("Genera CSV"):
 
     st.success(f"Righe lette dal database: {len(df)}")
 
+    # =====================================================
+    # NORMALIZZAZIONE E FILTRO QUOTA
+    # =====================================================
+
     try:
         df = promo.normalizza_output(df)
         df = promo.applica_filtro_quota_tutti_eventi(df)
@@ -109,6 +170,45 @@ if st.button("Genera CSV"):
         st.warning("Nessun ticket valido dopo il filtro quota.")
         st.stop()
 
+    # =====================================================
+    # FILTRO MERCATO
+    # =====================================================
+
+    if mercato_input.strip():
+        mercati_filtrati = [
+            x.strip().upper()
+            for x in mercato_input.split(",")
+            if x.strip()
+        ]
+
+        df["des_scom"] = df["des_scom"].fillna("").astype(str).str.strip()
+
+        df = df[
+            df["des_scom"].str.upper().isin(mercati_filtrati)
+        ].copy()
+
+        if df.empty:
+            st.warning("Nessun ticket trovato dopo il filtro Mercato.")
+            st.stop()
+
+    # =====================================================
+    # FILTRO IMPORTO GIOCATO
+    # =====================================================
+
+    if importo_giocato_min > 0:
+        df = df[df["importo_pagato"] >= float(importo_giocato_min)].copy()
+
+    if importo_giocato_max > 0:
+        df = df[df["importo_pagato"] <= float(importo_giocato_max)].copy()
+
+    if df.empty:
+        st.warning("Nessun ticket trovato dopo il filtro Importo Giocato.")
+        st.stop()
+
+    # =====================================================
+    # CREAZIONE OUTPUT TICKET / CF
+    # =====================================================
+
     colonne_ticket = [
         "id_ticket",
         "cf",
@@ -116,8 +216,8 @@ if st.button("Genera CSV"):
         "nome_commerciale",
         "des_stato",
         "data_ora_vend",
-        "des_scom",                     # Mercato, esempio 1X2
-        "importo_pagato",               # Importo Giocato
+        "des_scom",
+        "importo_pagato",
         "importo_vincita_potenziale",
     ]
 
