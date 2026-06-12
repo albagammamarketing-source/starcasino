@@ -1,4 +1,5 @@
 import streamlit as st
+from datetime import time
 import promo
 
 
@@ -22,7 +23,7 @@ data_vendita_da = st.date_input(
 
 ora_vendita_da = st.time_input(
     "Ora vendita da",
-    value=None
+    value=time(0, 0)
 )
 
 betradar_input = st.text_area(
@@ -57,10 +58,10 @@ if st.button("Genera CSV"):
         st.error("Devi inserire una data vendita da cui iniziare l'estrazione.")
         st.stop()
 
-    if ora_vendita_da is None:
-        ora_vendita_da = "00:00:00"
-
-    data_vendita_da_str = f"{data_vendita_da} {ora_vendita_da}"
+    data_vendita_da_str = (
+        f"{data_vendita_da.strftime('%Y-%m-%d')} "
+        f"{ora_vendita_da.strftime('%H:%M:%S')}"
+    )
 
     betradar_list = [
         x.strip()
@@ -77,57 +78,91 @@ if st.button("Genera CSV"):
     promo.BETRADAR_ID_LIST = betradar_list
     promo.QUOTA_MIN_TUTTI_EVENTI = float(quota_min)
     promo.IS_SISTEMA = int(is_sistema)
-    promo.CF = cf_input.strip() if cf_input.strip() else None
+    promo.CF = cf_input.strip().upper() if cf_input.strip() else None
 
     st.info("Estrazione dati in corso...")
     st.write(f"Data vendita da: {promo.DATA_VENDITA_DA}")
     st.write(f"Numero eventi richiesto: {len(betradar_list)}")
 
-    df = promo.estrai_dati()
+    try:
+        df = promo.estrai_dati()
+    except Exception as e:
+        st.error("Errore durante l'estrazione dati dal database.")
+        st.exception(e)
+        st.stop()
 
-    if df.empty:
+    if df is None or df.empty:
         st.error("Nessun dato trovato dal database.")
-    else:
-        st.success(f"Righe lette dal database: {len(df)}")
+        st.stop()
 
+    st.success(f"Righe lette dal database: {len(df)}")
+
+    try:
         df = promo.normalizza_output(df)
         df = promo.applica_filtro_quota_tutti_eventi(df)
+    except Exception as e:
+        st.error("Errore durante la normalizzazione o il filtro quota.")
+        st.exception(e)
+        st.stop()
 
-        if df.empty:
-            st.warning("Nessun ticket valido dopo il filtro quota.")
-        else:
-            colonne_ticket = [
-                "id_ticket",
-                "cf",
-                "num_conto",
-                "nome_commerciale",
-                "des_stato",
-                "data_ora_vend",
-                "importo_pagato",
-                "importo_vincita_potenziale",
-            ]
+    if df is None or df.empty:
+        st.warning("Nessun ticket valido dopo il filtro quota.")
+        st.stop()
 
-            ticket_cf = (
-                df[colonne_ticket]
-                .drop_duplicates(subset=["id_ticket", "cf"])
-                .sort_values(by=["nome_commerciale", "cf", "id_ticket"])
-                .reset_index(drop=True)
-            )
+    colonne_ticket = [
+        "id_ticket",
+        "cf",
+        "num_conto",
+        "nome_commerciale",
+        "des_stato",
+        "data_ora_vend",
+        "des_scom",                     # Mercato, esempio 1X2
+        "importo_pagato",               # Importo Giocato
+        "importo_vincita_potenziale",
+    ]
 
-            st.success(f"Ticket trovati: {ticket_cf['id_ticket'].nunique()}")
-            st.write(f"Punti vendita trovati: {ticket_cf['nome_commerciale'].nunique()}")
+    colonne_mancanti = [
+        col for col in colonne_ticket
+        if col not in df.columns
+    ]
 
-            st.dataframe(ticket_cf, use_container_width=True)
+    if colonne_mancanti:
+        st.error("Mancano alcune colonne necessarie nel dataframe finale:")
+        st.write(colonne_mancanti)
 
-            csv = ticket_cf.to_csv(
-                sep=";",
-                index=False,
-                decimal=","
-            ).encode("utf-8-sig")
+        st.write("Colonne disponibili nel dataframe:")
+        st.write(list(df.columns))
 
-            st.download_button(
-                label="Scarica CSV ticket",
-                data=csv,
-                file_name="1_starcasino_ticket_cf_filtrati.csv",
-                mime="text/csv",
-            )
+        st.stop()
+
+    ticket_cf = (
+        df[colonne_ticket]
+        .drop_duplicates(subset=["id_ticket", "cf"])
+        .sort_values(by=["nome_commerciale", "cf", "id_ticket"])
+        .reset_index(drop=True)
+    )
+
+    ticket_cf = ticket_cf.rename(columns={
+        "des_scom": "Mercato",
+        "importo_pagato": "Importo Giocato",
+        "importo_vincita_potenziale": "Importo Vincita Potenziale",
+    })
+
+    st.success(f"Ticket trovati: {ticket_cf['id_ticket'].nunique()}")
+    st.write(f"CF trovati: {ticket_cf['cf'].nunique()}")
+    st.write(f"Punti vendita trovati: {ticket_cf['nome_commerciale'].nunique()}")
+
+    st.dataframe(ticket_cf, use_container_width=True)
+
+    csv = ticket_cf.to_csv(
+        sep=";",
+        index=False,
+        decimal=","
+    ).encode("utf-8-sig")
+
+    st.download_button(
+        label="Scarica CSV ticket",
+        data=csv,
+        file_name="1_starcasino_ticket_cf_filtrati.csv",
+        mime="text/csv",
+    )
