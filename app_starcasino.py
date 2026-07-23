@@ -477,12 +477,11 @@ elif promozione_selezionata == "🏆 5evetsWin":
             <div class="promo-card-title">🏆 5evetsWin</div>
             <div class="promo-card-text">
                 <b>Obiettivo:</b> individuare i ticket composti esattamente dagli
-                eventi Betradar selezionati e classificarli in base al numero
-                di eventi risultati vincenti (<b>WI</b>).
+                eventi Betradar selezionati e contare, per ogni singolo ticket,
+                quanti eventi hanno esito <b>WI</b> e quanti hanno esito <b>LO</b>.
                 <br><br>
                 Se inserisci 5 Betradar ID, il sistema cerca esclusivamente
-                ticket da 5 eventi composti da quegli stessi 5 eventi e li
-                classifica da <b>0eventsWin</b> fino a <b>5eventsWin</b>.
+                ticket da 5 eventi composti da quegli stessi 5 eventi.
             </div>
         </div>
         """,
@@ -681,21 +680,13 @@ elif promozione_selezionata == "🏆 5evetsWin":
             f"{ticket_cf['nome_commerciale'].nunique()}"
         )
 
-        st.subheader("Riepilogo classificazioni")
+        st.subheader("Ticket estratti")
 
-        riepilogo_classificazioni = (
-            ticket_cf["classificazione_events_win"]
-            .value_counts()
-            .rename_axis("classificazione_events_win")
-            .reset_index(name="numero_ticket")
+        st.write(
+            "Le colonne eventi_WI ed eventi_LO indicano, per ogni ticket, "
+            "quanti eventi hanno rispettivamente cod_stato_esito = WI "
+            "e cod_stato_esito = LO."
         )
-
-        st.dataframe(
-            riepilogo_classificazioni,
-            use_container_width=True,
-        )
-
-        st.subheader("Ticket classificati")
 
         st.dataframe(
             ticket_cf,
@@ -709,9 +700,9 @@ elif promozione_selezionata == "🏆 5evetsWin":
         ).encode("utf-8-sig")
 
         st.download_button(
-            label="Scarica CSV ticket classificati",
+            label="Scarica CSV ticket con conteggio WI/LO",
             data=csv_ticket,
-            file_name="1_5evetswin_ticket_classificati.csv",
+            file_name="1_5evetswin_ticket_WI_LO.csv",
             mime="text/csv",
         )
 

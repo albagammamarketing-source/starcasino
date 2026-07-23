@@ -338,29 +338,31 @@ def applica_filtro_quota_tutti_eventi(
 
 
 # =========================================================
-# CLASSIFICAZIONE EVENTS WIN
+# CONTEGGIO ESITI WI / LO
 # =========================================================
 
-def calcola_classificazione_events_win(
+def calcola_conteggio_esiti(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Per ogni id_ticket:
-    - conta gli eventi totali presenti nel dettaglio
-    - conta gli eventi con cod_stato_esito = WI
-    - assegna classificazione:
-        5 WI -> 5eventsWin
-        4 WI -> 4eventsWin
-        ...
-        1 WI -> 1eventsWin
-        0 WI -> 0eventsWin
+    Per ogni id_ticket conta semplicemente:
 
-    La classificazione dipende dal numero di WI,
-    non dal numero totale di eventi del ticket.
+    - eventi_WI = numero di righe con cod_stato_esito = WI
+    - eventi_LO = numero di righe con cod_stato_esito = LO
+
+    Nessuna classificazione aggiuntiva.
     """
 
     if df.empty:
-        return df
+        return pd.DataFrame(
+            columns=[
+                "id_ticket",
+                "num_eventi",
+                "eventi_dettaglio",
+                "eventi_WI",
+                "eventi_LO",
+            ]
+        )
 
     richieste = {
         "id_ticket",
@@ -372,16 +374,25 @@ def calcola_classificazione_events_win(
 
     if mancanti:
         raise ValueError(
-            "Colonne mancanti per classificazione: "
+            "Colonne mancanti per conteggio esiti: "
             f"{sorted(mancanti)}"
         )
 
     riepilogo = (
-        df.groupby("id_ticket", as_index=False)
+        df.groupby(
+            "id_ticket",
+            as_index=False,
+        )
         .agg(
-            num_eventi=("num_eventi", "first"),
-            eventi_dettaglio=("id_ticket", "size"),
-            eventi_vinti=(
+            num_eventi=(
+                "num_eventi",
+                "first",
+            ),
+            eventi_dettaglio=(
+                "id_ticket",
+                "size",
+            ),
+            eventi_WI=(
                 "cod_stato_esito",
                 lambda s: int(
                     s.astype(str)
@@ -391,46 +402,43 @@ def calcola_classificazione_events_win(
                     .sum()
                 ),
             ),
+            eventi_LO=(
+                "cod_stato_esito",
+                lambda s: int(
+                    s.astype(str)
+                    .str.strip()
+                    .str.upper()
+                    .eq("LO")
+                    .sum()
+                ),
+            ),
         )
-    )
-
-    riepilogo["eventi_sbagliati"] = (
-        riepilogo["num_eventi"].astype(int)
-        - riepilogo["eventi_vinti"].astype(int)
-    )
-
-    riepilogo["classificazione_events_win"] = (
-        riepilogo["eventi_vinti"]
-        .astype(int)
-        .astype(str)
-        + "eventsWin"
     )
 
     return riepilogo
 
 
-def aggiungi_classificazione_al_dettaglio(
+def aggiungi_conteggio_esiti_al_dettaglio(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
     Aggiunge a tutte le righe di dettaglio:
-    - eventi_vinti
-    - classificazione_events_win
+    - eventi_WI
+    - eventi_LO
     """
 
     if df.empty:
         return df
 
-    classificazione = calcola_classificazione_events_win(df)
+    conteggio = calcola_conteggio_esiti(df)
 
     return df.merge(
-        classificazione[
+        conteggio[
             [
                 "id_ticket",
                 "eventi_dettaglio",
-                "eventi_vinti",
-                "eventi_sbagliati",
-                "classificazione_events_win",
+                "eventi_WI",
+                "eventi_LO",
             ]
         ],
         on="id_ticket",
@@ -447,29 +455,34 @@ def crea_output_ticket(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Una riga per ticket con classificazione eventsWin.
+    Una riga per ticket con conteggio WI e LO.
     """
+
+    colonne_output = [
+        "id_ticket",
+        "cf",
+        "num_conto",
+        "nome_commerciale",
+        "des_stato",
+        "data_ora_vend",
+        "num_eventi",
+        "eventi_WI",
+        "eventi_LO",
+        "Mercato",
+        "Importo Giocato",
+        "Importo Vincita Potenziale",
+    ]
 
     if df.empty:
         return pd.DataFrame(
-            columns=[
-                "id_ticket",
-                "cf",
-                "num_conto",
-                "nome_commerciale",
-                "des_stato",
-                "data_ora_vend",
-                "num_eventi",
-                "eventi_vinti",
-                "eventi_sbagliati",
-                "classificazione_events_win",
-                "Mercato",
-                "Importo Giocato",
-                "Importo Vincita Potenziale",
-            ]
+            columns=colonne_output
         )
 
-    df_classificato = aggiungi_classificazione_al_dettaglio(df)
+    df_conteggiato = (
+        aggiungi_conteggio_esiti_al_dettaglio(
+            df
+        )
+    )
 
     colonne_ticket = [
         "id_ticket",
@@ -479,39 +492,42 @@ def crea_output_ticket(
         "des_stato",
         "data_ora_vend",
         "num_eventi",
-        "eventi_vinti",
-        "eventi_sbagliati",
-        "classificazione_events_win",
+        "eventi_WI",
+        "eventi_LO",
         "des_scom",
         "importo_pagato",
         "importo_vincita_potenziale",
     ]
 
-    mancanti = [
-        c
-        for c in colonne_ticket
-        if c not in df_classificato.columns
+    colonne_mancanti = [
+        col
+        for col in colonne_ticket
+        if col not in df_conteggiato.columns
     ]
 
-    if mancanti:
+    if colonne_mancanti:
         raise ValueError(
             "Colonne mancanti per output ticket: "
-            f"{mancanti}"
+            f"{colonne_mancanti}"
         )
 
     ticket = (
-        df_classificato[colonne_ticket]
-        .drop_duplicates(subset=["id_ticket"])
+        df_conteggiato[
+            colonne_ticket
+        ]
+        .drop_duplicates(
+            subset=["id_ticket"]
+        )
         .sort_values(
             by=[
-                "classificazione_events_win",
-                "num_eventi",
+                "eventi_WI",
+                "eventi_LO",
                 "cf",
                 "id_ticket",
             ],
             ascending=[
                 False,
-                False,
+                True,
                 True,
                 True,
             ],
@@ -528,7 +544,9 @@ def crea_output_ticket(
         }
     )
 
-    return ticket
+    return ticket[
+        colonne_output
+    ]
 
 
 # =========================================================
@@ -539,13 +557,18 @@ def crea_output_dettaglio(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Mantiene tutte le righe evento dei ticket estratti.
+    Mantiene tutte le righe evento dei ticket estratti
+    e aggiunge il conteggio WI / LO del ticket.
     """
 
     if df.empty:
         return pd.DataFrame()
 
-    dettaglio = aggiungi_classificazione_al_dettaglio(df)
+    dettaglio = (
+        aggiungi_conteggio_esiti_al_dettaglio(
+            df
+        )
+    )
 
     colonne = [
         "id_ticket",
@@ -555,9 +578,8 @@ def crea_output_dettaglio(
         "des_stato",
         "data_ora_vend",
         "num_eventi",
-        "eventi_vinti",
-        "eventi_sbagliati",
-        "classificazione_events_win",
+        "eventi_WI",
+        "eventi_LO",
         "betradar_id",
         "des_sport",
         "des_manif",
@@ -570,12 +592,14 @@ def crea_output_dettaglio(
     ]
 
     colonne_presenti = [
-        c
-        for c in colonne
-        if c in dettaglio.columns
+        col
+        for col in colonne
+        if col in dettaglio.columns
     ]
 
-    dettaglio = dettaglio[colonne_presenti].copy()
+    dettaglio = dettaglio[
+        colonne_presenti
+    ].copy()
 
     dettaglio = dettaglio.rename(
         columns={
@@ -586,13 +610,17 @@ def crea_output_dettaglio(
         }
     )
 
-    dettaglio = dettaglio.sort_values(
-        by=[
-            "id_ticket",
-            "betradar_id",
-        ],
-        na_position="last",
-    ).reset_index(drop=True)
+    dettaglio = (
+        dettaglio
+        .sort_values(
+            by=[
+                "id_ticket",
+                "betradar_id",
+            ],
+            na_position="last",
+        )
+        .reset_index(drop=True)
+    )
 
     return dettaglio
 
