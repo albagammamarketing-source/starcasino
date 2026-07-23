@@ -40,9 +40,9 @@ DATA_VENDITA_DA = "2026-05-01 00:00:00"
 
 # Numero MASSIMO di eventi del ticket.
 # Esempio:
-# EVENTI_MAX = 5 -> prende ticket con num_eventi da 1 a 5
-# EVENTI_MAX = 7 -> prende ticket con num_eventi da 1 a 7
-EVENTI_MAX = 5
+# EVENTI = 5 -> prende ticket con num_eventi da 1 a 5
+# EVENTI = 7 -> prende ticket con num_eventi da 1 a 7
+EVENTI = 5
 
 DES_STATO = None
 IS_SISTEMA = 0
@@ -91,35 +91,75 @@ def apri_connessione(cfg: dict):
 
 def costruisci_query() -> tuple[str, list[object]]:
     """
-    Estrae tutti i dettagli dei ticket che rispettano i filtri.
+    Estrae SOLO ticket composti esattamente dai Betradar ID inseriti.
 
-    Regola principale 5evetsWin:
-    - tg.num_eventi <= EVENTI_MAX
-    - il ticket NON viene filtrato in base al numero di WI
-    - tutti gli eventi vengono estratti
-    - la classificazione viene calcolata successivamente contando
-      quante righe Ticket_Detail hanno cod_stato_esito = 'WI'
+    Esempio:
+    EVENTI = 5 e 5 Betradar ID -> prende soltanto ticket con:
+    - tg.num_eventi = 5
+    - esattamente 5 righe/eventi in Ticket_Detail
+    - esattamente quei 5 Betradar ID
+    - nessun Betradar diverso o aggiuntivo
     """
 
-    if EVENTI_MAX is None or int(EVENTI_MAX) <= 0:
-        raise ValueError("EVENTI_MAX deve essere maggiore di 0.")
+    betradar_list = list(dict.fromkeys(
+        str(x).strip()
+        for x in (BETRADAR_ID_LIST or [])
+        if str(x).strip()
+    ))
 
+    if not betradar_list:
+        raise ValueError("Devi inserire almeno un Betradar ID.")
+
+    if EVENTI is None or int(EVENTI) <= 0:
+        raise ValueError("Il campo Eventi deve essere maggiore di 0.")
+
+    if len(betradar_list) != int(EVENTI):
+        raise ValueError(
+            f"Eventi = {EVENTI}, ma sono stati inseriti "
+            f"{len(betradar_list)} Betradar ID. I valori devono coincidere."
+        )
+
+    num_eventi_attesi = int(EVENTI)
     col_data = "STR_TO_DATE(tg.data_ora_vend, '%%Y%%m%%d %%H:%%i:%%s')"
+    placeholders = ",".join(["%s"] * len(betradar_list))
 
     where_clauses = [
         "tg.data_ora_vend IS NOT NULL",
         "tg.data_ora_vend <> ''",
         f"{col_data} >= %s",
-        "tg.num_eventi >= 1",
-        "tg.num_eventi <= %s",
+        "tg.num_eventi = %s",
         "tg.is_sistema = %s",
+        f"""
+        tg.id_ticket IN (
+            SELECT td_match.id_ticket
+            FROM Ticket_Detail td_match
+            GROUP BY td_match.id_ticket
+            HAVING
+                COUNT(*) = %s
+                AND COUNT(
+                    DISTINCT TRIM(CAST(td_match.betradar_id AS CHAR))
+                ) = %s
+                AND SUM(
+                    CASE
+                        WHEN TRIM(CAST(td_match.betradar_id AS CHAR))
+                            IN ({placeholders})
+                        THEN 1
+                        ELSE 0
+                    END
+                ) = %s
+        )
+        """
     ]
 
     params: list[object] = [
         DATA_VENDITA_DA,
-        int(EVENTI_MAX),
+        num_eventi_attesi,
         int(IS_SISTEMA),
+        num_eventi_attesi,
+        num_eventi_attesi,
     ]
+    params.extend(betradar_list)
+    params.append(num_eventi_attesi)
 
     if DES_STATO:
         where_clauses.append("tg.des_stato = %s")
@@ -130,58 +170,15 @@ def costruisci_query() -> tuple[str, list[object]]:
         where_clauses.append("UPPER(TRIM(tg.cf)) = %s")
         params.append(filtro_cf.upper())
 
-    # -----------------------------------------------------
-    # FILTRO BETRADAR OPZIONALE
-    # -----------------------------------------------------
-    # Se vengono indicati uno o più Betradar ID, il ticket deve
-    # contenere almeno uno degli ID richiesti.
-    # Non imponiamo che il ticket sia composto esclusivamente
-    # da quegli ID, perché questa promo ha logica diversa
-    # dalla Promo Betradar attuale.
-    # -----------------------------------------------------
-
-    if BETRADAR_ID_LIST:
-        betradar_list = [
-            str(x).strip()
-            for x in BETRADAR_ID_LIST
-            if str(x).strip()
-        ]
-
-        if betradar_list:
-            placeholders = ",".join(["%s"] * len(betradar_list))
-
-            where_clauses.append(
-                f"""
-                EXISTS (
-                    SELECT 1
-                    FROM Ticket_Detail td_b
-                    WHERE td_b.id_ticket = tg.id_ticket
-                      AND TRIM(CAST(td_b.betradar_id AS CHAR))
-                          IN ({placeholders})
-                )
-                """
-            )
-
-            params.extend(betradar_list)
-
-    # -----------------------------------------------------
-    # FILTRO MERCATO OPZIONALE
-    # -----------------------------------------------------
-    # Mantiene la stessa logica della promo attuale:
-    # se valorizzato, accetta ticket con un solo des_scom distinto
-    # e appartenente ai mercati indicati.
-    # -----------------------------------------------------
-
     if DES_SCOM_LIST:
-        des_scom_list = [
+        des_scom_list = list(dict.fromkeys(
             str(x).strip()
             for x in DES_SCOM_LIST
             if str(x).strip()
-        ]
+        ))
 
         if des_scom_list:
-            placeholders = ",".join(["%s"] * len(des_scom_list))
-
+            mercato_placeholders = ",".join(["%s"] * len(des_scom_list))
             where_clauses.append(
                 f"""
                 tg.id_ticket IN (
@@ -190,17 +187,14 @@ def costruisci_query() -> tuple[str, list[object]]:
                     GROUP BY td_scom.id_ticket
                     HAVING
                         COUNT(
-                            DISTINCT TRIM(
-                                COALESCE(td_scom.des_scom, '')
-                            )
+                            DISTINCT TRIM(COALESCE(td_scom.des_scom, ''))
                         ) = 1
                         AND MAX(
                             TRIM(COALESCE(td_scom.des_scom, ''))
-                        ) IN ({placeholders})
+                        ) IN ({mercato_placeholders})
                 )
                 """
             )
-
             params.extend(des_scom_list)
 
     where_sql = "\n        AND ".join(where_clauses)
@@ -217,7 +211,6 @@ def costruisci_query() -> tuple[str, list[object]]:
             tg.data_ora_vend,
             tg.importo_pagato_eur,
             tg.importo_vincita_eur,
-
             td.betradar_id,
             td.des_sport,
             td.des_manif,
@@ -225,22 +218,18 @@ def costruisci_query() -> tuple[str, list[object]]:
             td.des_eve,
             td.quota,
             td.cod_stato_esito
-
         FROM Ticket_General tg
-
         INNER JOIN Ticket_Detail td
             ON tg.id_ticket = td.id_ticket
-
         WHERE {where_sql}
-
         ORDER BY
             {col_data},
             tg.cf,
-            tg.id_ticket
+            tg.id_ticket,
+            td.betradar_id
     """
 
     return query, params
-
 
 def estrai_dati() -> pd.DataFrame:
     query, params = costruisci_query()
@@ -420,6 +409,11 @@ def calcola_classificazione_events_win(
         )
     )
 
+    riepilogo["eventi_sbagliati"] = (
+        riepilogo["num_eventi"].astype(int)
+        - riepilogo["eventi_vinti"].astype(int)
+    )
+
     riepilogo["classificazione_events_win"] = (
         riepilogo["eventi_vinti"]
         .astype(int)
@@ -450,6 +444,7 @@ def aggiungi_classificazione_al_dettaglio(
                 "id_ticket",
                 "eventi_dettaglio",
                 "eventi_vinti",
+                "eventi_sbagliati",
                 "classificazione_events_win",
             ]
         ],
@@ -481,6 +476,7 @@ def crea_output_ticket(
                 "data_ora_vend",
                 "num_eventi",
                 "eventi_vinti",
+                "eventi_sbagliati",
                 "classificazione_events_win",
                 "Mercato",
                 "Importo Giocato",
@@ -499,6 +495,7 @@ def crea_output_ticket(
         "data_ora_vend",
         "num_eventi",
         "eventi_vinti",
+        "eventi_sbagliati",
         "classificazione_events_win",
         "des_scom",
         "importo_pagato",
@@ -574,6 +571,7 @@ def crea_output_dettaglio(
         "data_ora_vend",
         "num_eventi",
         "eventi_vinti",
+        "eventi_sbagliati",
         "classificazione_events_win",
         "betradar_id",
         "des_sport",
@@ -678,10 +676,10 @@ def main() -> None:
     print("Estrazione STARCASINO - 5evetsWin")
     print(f"Database: {DB_CONFIG['database']}")
     print(f"Data vendita da: {DATA_VENDITA_DA}")
-    print(f"Numero massimo eventi: {EVENTI_MAX}")
+    print(f"Numero eventi esatto: {EVENTI}")
     print(
         "Regola eventi: "
-        f"1 <= num_eventi <= {EVENTI_MAX}"
+        f"num_eventi = {EVENTI}"
     )
     print(f"Filtro stato ticket: {DES_STATO or 'TUTTI'}")
     print(f"Filtro is_sistema: {IS_SISTEMA}")

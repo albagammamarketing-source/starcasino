@@ -329,8 +329,8 @@ elif promozione_selezionata == "5evetsWin":
     )
 
     st.info(
-        "Il campo Eventi indica il numero massimo di eventi giocati da considerare. "
-        "Esempio: Eventi = 5 considera ticket con num_eventi da 1 a 5."
+        "Il campo Eventi indica il numero esatto di eventi del ticket. "
+        "Deve coincidere con il numero di Betradar ID inseriti."
     )
 
     data_vendita_da = st.date_input(
@@ -359,7 +359,7 @@ elif promozione_selezionata == "5evetsWin":
     )
 
     betradar_input = st.text_area(
-        "Betradar ID separati da virgola - opzionale",
+        "Betradar ID separati da virgola",
         value="",
         key="5evetswin_betradar_input",
     )
@@ -437,8 +437,20 @@ elif promozione_selezionata == "5evetsWin":
             if x.strip()
         ))
 
+        if not betradar_list:
+            st.error("Devi inserire almeno un Betradar ID.")
+            st.stop()
+
+        if len(betradar_list) != int(eventi_max):
+            st.error(
+                f"Hai impostato Eventi = {int(eventi_max)}, "
+                f"ma hai inserito {len(betradar_list)} Betradar ID. "
+                "I due valori devono coincidere."
+            )
+            st.stop()
+
         promo_5evetswin.DATA_VENDITA_DA = data_vendita_da_str
-        promo_5evetswin.EVENTI_MAX = int(eventi_max)
+        promo_5evetswin.EVENTI = int(eventi_max)
         promo_5evetswin.BETRADAR_ID_LIST = (
             betradar_list if betradar_list else None
         )
@@ -456,10 +468,10 @@ elif promozione_selezionata == "5evetsWin":
         st.info("Estrazione dati 5evetsWin in corso...")
 
         st.write(f"Data vendita da: {promo_5evetswin.DATA_VENDITA_DA}")
-        st.write(f"Numero massimo eventi: {promo_5evetswin.EVENTI_MAX}")
+        st.write(f"Numero massimo eventi: {promo_5evetswin.EVENTI}")
         st.write(
             f"Regola eventi: 1 <= num_eventi <= "
-            f"{promo_5evetswin.EVENTI_MAX}"
+            f"{promo_5evetswin.EVENTI}"
         )
         st.write(
             f"Betradar: "
