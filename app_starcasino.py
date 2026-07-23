@@ -356,7 +356,7 @@ elif promozione_selezionata == "5evetsWin":
     quota_min = st.number_input(
         "Quota minima su tutti gli eventi",
         min_value=0.0,
-        value=1.5,
+        value=1.0,
         step=0.1,
         format="%.2f",
         key="5evetswin_quota_min",
