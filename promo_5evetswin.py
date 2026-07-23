@@ -119,7 +119,7 @@ def costruisci_query() -> tuple[str, list[object]]:
             f"{len(betradar_list)} Betradar ID. I valori devono coincidere."
         )
 
-    num_eventi_attesi = int(EVENTI)
+    num_eventi_attesi = len(betradar_list)
     col_data = "STR_TO_DATE(tg.data_ora_vend, '%%Y%%m%%d %%H:%%i:%%s')"
     placeholders = ",".join(["%s"] * len(betradar_list))
 
@@ -676,10 +676,10 @@ def main() -> None:
     print("Estrazione STARCASINO - 5evetsWin")
     print(f"Database: {DB_CONFIG['database']}")
     print(f"Data vendita da: {DATA_VENDITA_DA}")
-    print(f"Numero eventi esatto: {EVENTI}")
+    print(f"Numero eventi esatto: {len(BETRADAR_ID_LIST or [])}")
     print(
         "Regola eventi: "
-        f"num_eventi = {EVENTI}"
+        f"num_eventi = {len(BETRADAR_ID_LIST or [])}"
     )
     print(f"Filtro stato ticket: {DES_STATO or 'TUTTI'}")
     print(f"Filtro is_sistema: {IS_SISTEMA}")

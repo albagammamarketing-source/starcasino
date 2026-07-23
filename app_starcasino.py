@@ -329,8 +329,9 @@ elif promozione_selezionata == "5evetsWin":
     )
 
     st.info(
-        "Il campo Eventi indica il numero esatto di eventi del ticket. "
-        "Deve coincidere con il numero di Betradar ID inseriti."
+        "Il numero di eventi viene determinato automaticamente dai Betradar ID inseriti. "
+        "Esempio: 5 Betradar ID = ricerca di ticket con esattamente 5 eventi, "
+        "composti esclusivamente da quei 5 Betradar."
     )
 
     data_vendita_da = st.date_input(
@@ -344,18 +345,6 @@ elif promozione_selezionata == "5evetsWin":
         "Ora vendita da",
         value=time(0, 0),
         key="5evetswin_ora_vendita_da",
-    )
-
-    eventi_max = st.number_input(
-        "Eventi",
-        min_value=1,
-        value=5,
-        step=1,
-        key="5evetswin_eventi_max",
-        help=(
-            "Numero massimo di eventi giocati del ticket. "
-            "Esempio: 5 = ticket con num_eventi da 1 a 5."
-        ),
     )
 
     betradar_input = st.text_area(
@@ -441,19 +430,8 @@ elif promozione_selezionata == "5evetsWin":
             st.error("Devi inserire almeno un Betradar ID.")
             st.stop()
 
-        if len(betradar_list) != int(eventi_max):
-            st.error(
-                f"Hai impostato Eventi = {int(eventi_max)}, "
-                f"ma hai inserito {len(betradar_list)} Betradar ID. "
-                "I due valori devono coincidere."
-            )
-            st.stop()
-
         promo_5evetswin.DATA_VENDITA_DA = data_vendita_da_str
-        promo_5evetswin.EVENTI = int(eventi_max)
-        promo_5evetswin.BETRADAR_ID_LIST = (
-            betradar_list if betradar_list else None
-        )
+        promo_5evetswin.BETRADAR_ID_LIST = betradar_list
         promo_5evetswin.QUOTA_MIN_TUTTI_EVENTI = float(quota_min)
         promo_5evetswin.IS_SISTEMA = int(is_sistema)
         promo_5evetswin.CF = (
@@ -468,10 +446,9 @@ elif promozione_selezionata == "5evetsWin":
         st.info("Estrazione dati 5evetsWin in corso...")
 
         st.write(f"Data vendita da: {promo_5evetswin.DATA_VENDITA_DA}")
-        st.write(f"Numero massimo eventi: {promo_5evetswin.EVENTI}")
+        st.write(f"Numero eventi esatto: {len(betradar_list)}")
         st.write(
-            f"Regola eventi: 1 <= num_eventi <= "
-            f"{promo_5evetswin.EVENTI}"
+            f"Regola eventi: num_eventi = {len(betradar_list)}"
         )
         st.write(
             f"Betradar: "
