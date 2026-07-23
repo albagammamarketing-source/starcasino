@@ -36,7 +36,7 @@ st.divider()
 # PROMO 1 - BETRADAR ATTUALE
 # =========================================================
 
-if promozione_selezionata == "Promo Betradar attuale":
+if promozione_selezionata == "Promo Betradar Events>ODDS":
 
     st.header("Promo Betradar attuale")
 
