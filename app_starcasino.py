@@ -13,20 +13,164 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("Estrazioni Promozioni - STARCASINO")
-st.write("Seleziona la promozione da utilizzare e imposta i relativi filtri.")
+# =========================================================
+# STILE GRAFICO
+# =========================================================
+
+st.markdown(
+    """
+    <style>
+
+    /* Contenitore principale */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+        max-width: 1450px;
+    }
+
+    /* Titolo principale */
+    .main-title {
+        font-size: 36px;
+        font-weight: 800;
+        margin-bottom: 4px;
+        letter-spacing: -0.5px;
+    }
+
+    .main-subtitle {
+        font-size: 17px;
+        color: #6b7280;
+        margin-bottom: 26px;
+    }
+
+    /* Box menu */
+    .menu-box {
+        padding: 16px 18px;
+        border-radius: 14px;
+        border: 1px solid #d7dce3;
+        background: #f8fafc;
+        margin-bottom: 10px;
+    }
+
+    .menu-title {
+        font-size: 18px;
+        font-weight: 800;
+        margin-bottom: 3px;
+    }
+
+    .menu-help {
+        font-size: 14px;
+        color: #6b7280;
+    }
+
+    /* Selectbox */
+    div[data-baseweb="select"] > div {
+        border-radius: 12px !important;
+        min-height: 48px;
+        font-weight: 700;
+        border: 2px solid #2563eb !important;
+        background-color: #ffffff;
+    }
+
+    /* Box descrizione promo */
+    .promo-card {
+        padding: 20px 22px;
+        border-radius: 14px;
+        margin: 8px 0 22px 0;
+        border: 1px solid;
+    }
+
+    .promo-card-title {
+        font-size: 22px;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+
+    .promo-card-text {
+        font-size: 16px;
+        line-height: 1.55;
+    }
+
+    .promo-betradar {
+        background: #eef5ff;
+        border-color: #b9d1ff;
+        border-left: 6px solid #2563eb;
+    }
+
+    .promo-win {
+        background: #fff8e8;
+        border-color: #f5d889;
+        border-left: 6px solid #e5a000;
+    }
+
+    /* Etichette campi */
+    label[data-testid="stWidgetLabel"] p {
+        font-weight: 700 !important;
+    }
+
+    /* Input */
+    input, textarea {
+        border-radius: 10px !important;
+    }
+
+    /* Pulsanti */
+    .stButton > button {
+        border-radius: 10px;
+        font-weight: 800;
+        padding: 0.65rem 1.2rem;
+    }
+
+    .stDownloadButton > button {
+        border-radius: 10px;
+        font-weight: 800;
+    }
+
+    /* Divider */
+    hr {
+        margin-top: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    '<div class="main-title">🎯 Estrazioni Promozioni - STARCASINO</div>',
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    '<div class="main-subtitle">'
+    'Seleziona la promozione, configura i filtri e genera il CSV di estrazione.'
+    '</div>',
+    unsafe_allow_html=True,
+)
 
 
 # =========================================================
 # MENU PROMOZIONI
 # =========================================================
 
+st.markdown(
+    """
+    <div class="menu-box">
+        <div class="menu-title">📌 Seleziona promozione</div>
+        <div class="menu-help">
+            Scegli il tipo di estrazione che vuoi eseguire.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 promozione_selezionata = st.selectbox(
     "Seleziona promozione",
     options=[
-        "Promo Betradar attuale",
-        "5evetsWin",
+        "🎯 Promo Betradar attuale",
+        "🏆 5evetsWin",
     ],
+    label_visibility="collapsed",
 )
 
 st.divider()
@@ -36,18 +180,24 @@ st.divider()
 # PROMO 1 - BETRADAR ATTUALE
 # =========================================================
 
-if promozione_selezionata == "Promo Betradar attuale":
+if promozione_selezionata == "🎯 Promo Betradar attuale":
 
-    st.header("Promo Betradar attuale")
-
-    st.write(
-        "Estrazione dei ticket STARCASINO sulla base di una specifica "
-        "combinazione di eventi Betradar e dei filtri impostati."
-    )
-
-    st.info(
-        "Output CSV: id_ticket, cf, num_conto, nome_commerciale, des_stato, "
-        "data_ora_vend, Mercato, Importo Giocato, Importo Vincita Potenziale"
+    st.markdown(
+        """
+        <div class="promo-card promo-betradar">
+            <div class="promo-card-title">🎯 Promo Betradar attuale</div>
+            <div class="promo-card-text">
+                <b>Obiettivo:</b> individuare i ticket giocati su una specifica
+                combinazione di eventi Betradar e restituire i principali dati
+                anagrafici ed economici dei ticket trovati.
+                <br><br>
+                <b>Output:</b> id_ticket, CF, numero conto, nome commerciale,
+                stato ticket, data vendita, mercato, importo giocato e
+                vincita potenziale.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     # =====================================================
@@ -76,7 +226,7 @@ if promozione_selezionata == "Promo Betradar attuale":
     quota_min = st.number_input(
         "Quota minima su tutti gli eventi",
         min_value=0.0,
-        value=1.0,
+        value=1.5,
         step=0.1,
         format="%.2f",
         key="betradar_quota_min",
@@ -319,19 +469,24 @@ if promozione_selezionata == "Promo Betradar attuale":
 # PROMO 2 - 5evetsWin
 # =========================================================
 
-elif promozione_selezionata == "5evetsWin":
+elif promozione_selezionata == "🏆 5evetsWin":
 
-    st.header("5evetsWin")
-
-    st.write(
-        "Estrazione e classificazione dei ticket STARCASINO in base "
-        "al numero di eventi vincenti con cod_stato_esito = WI."
-    )
-
-    st.info(
-        "Il numero di eventi viene determinato automaticamente dai Betradar ID inseriti. "
-        "Esempio: 5 Betradar ID = ricerca di ticket con esattamente 5 eventi, "
-        "composti esclusivamente da quei 5 Betradar."
+    st.markdown(
+        """
+        <div class="promo-card promo-win">
+            <div class="promo-card-title">🏆 5evetsWin</div>
+            <div class="promo-card-text">
+                <b>Obiettivo:</b> individuare i ticket composti esattamente dagli
+                eventi Betradar selezionati e classificarli in base al numero
+                di eventi risultati vincenti (<b>WI</b>).
+                <br><br>
+                Se inserisci 5 Betradar ID, il sistema cerca esclusivamente
+                ticket da 5 eventi composti da quegli stessi 5 eventi e li
+                classifica da <b>0eventsWin</b> fino a <b>5eventsWin</b>.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     data_vendita_da = st.date_input(
@@ -349,7 +504,7 @@ elif promozione_selezionata == "5evetsWin":
 
     betradar_input = st.text_area(
         "Betradar ID separati da virgola",
-        value="",
+        value="53452557,53452541,53452547,53452561,53452543",
         key="5evetswin_betradar_input",
     )
 
