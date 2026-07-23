@@ -38,12 +38,6 @@ DB_CONFIG = {
 
 DATA_VENDITA_DA = "2026-05-01 00:00:00"
 
-# Numero MASSIMO di eventi del ticket.
-# Esempio:
-# EVENTI = 5 -> prende ticket con num_eventi da 1 a 5
-# EVENTI = 7 -> prende ticket con num_eventi da 1 a 7
-EVENTI = 5
-
 DES_STATO = None
 IS_SISTEMA = 0
 
@@ -94,7 +88,7 @@ def costruisci_query() -> tuple[str, list[object]]:
     Estrae SOLO ticket composti esattamente dai Betradar ID inseriti.
 
     Esempio:
-    EVENTI = 5 e 5 Betradar ID -> prende soltanto ticket con:
+    5 Betradar ID inseriti -> prende soltanto ticket con:
     - tg.num_eventi = 5
     - esattamente 5 righe/eventi in Ticket_Detail
     - esattamente quei 5 Betradar ID
@@ -109,15 +103,6 @@ def costruisci_query() -> tuple[str, list[object]]:
 
     if not betradar_list:
         raise ValueError("Devi inserire almeno un Betradar ID.")
-
-    if EVENTI is None or int(EVENTI) <= 0:
-        raise ValueError("Il campo Eventi deve essere maggiore di 0.")
-
-    if len(betradar_list) != int(EVENTI):
-        raise ValueError(
-            f"Eventi = {EVENTI}, ma sono stati inseriti "
-            f"{len(betradar_list)} Betradar ID. I valori devono coincidere."
-        )
 
     num_eventi_attesi = len(betradar_list)
     col_data = "STR_TO_DATE(tg.data_ora_vend, '%%Y%%m%%d %%H:%%i:%%s')"
