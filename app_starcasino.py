@@ -76,7 +76,7 @@ if promozione_selezionata == "Promo Betradar attuale":
     quota_min = st.number_input(
         "Quota minima su tutti gli eventi",
         min_value=0.0,
-        value=1.5,
+        value=1.0,
         step=0.1,
         format="%.2f",
         key="betradar_quota_min",
