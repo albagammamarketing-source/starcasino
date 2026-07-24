@@ -468,7 +468,6 @@ def crea_output_ticket(
         "num_eventi",
         "eventi_WI",
         "eventi_LO",
-        "Mercato",
         "Importo Giocato",
         "Importo Vincita Potenziale",
     ]
@@ -494,7 +493,6 @@ def crea_output_ticket(
         "num_eventi",
         "eventi_WI",
         "eventi_LO",
-        "des_scom",
         "importo_pagato",
         "importo_vincita_potenziale",
     ]
@@ -537,7 +535,6 @@ def crea_output_ticket(
 
     ticket = ticket.rename(
         columns={
-            "des_scom": "Mercato",
             "importo_pagato": "Importo Giocato",
             "importo_vincita_potenziale":
                 "Importo Vincita Potenziale",
