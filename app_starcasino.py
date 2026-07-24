@@ -1,7 +1,8 @@
 import streamlit as st
 from datetime import time
+
 import promo
-import promo_5evetswin
+import promo_3moreEvents
 
 
 # =========================================================
@@ -10,8 +11,9 @@ import promo_5evetswin
 
 st.set_page_config(
     page_title="STARCASINO - Gestione Promozioni",
-    layout="wide"
+    layout="wide",
 )
+
 
 # =========================================================
 # STILE GRAFICO
@@ -21,14 +23,12 @@ st.markdown(
     """
     <style>
 
-    /* Contenitore principale */
     .block-container {
         padding-top: 2rem;
         padding-bottom: 3rem;
         max-width: 1450px;
     }
 
-    /* Titolo principale */
     .main-title {
         font-size: 36px;
         font-weight: 800;
@@ -42,7 +42,6 @@ st.markdown(
         margin-bottom: 26px;
     }
 
-    /* Box menu */
     .menu-box {
         padding: 16px 18px;
         border-radius: 14px;
@@ -62,7 +61,6 @@ st.markdown(
         color: #6b7280;
     }
 
-    /* Selectbox */
     div[data-baseweb="select"] > div {
         border-radius: 12px !important;
         min-height: 48px;
@@ -71,7 +69,6 @@ st.markdown(
         background-color: #ffffff;
     }
 
-    /* Box descrizione promo */
     .promo-card {
         padding: 20px 22px;
         border-radius: 14px;
@@ -96,23 +93,20 @@ st.markdown(
         border-left: 6px solid #2563eb;
     }
 
-    .promo-win {
-        background: #fff8e8;
-        border-color: #f5d889;
-        border-left: 6px solid #e5a000;
+    .promo-3more {
+        background: #eefbf3;
+        border-color: #a9dfbd;
+        border-left: 6px solid #16a34a;
     }
 
-    /* Etichette campi */
     label[data-testid="stWidgetLabel"] p {
         font-weight: 700 !important;
     }
 
-    /* Input */
     input, textarea {
         border-radius: 10px !important;
     }
 
-    /* Pulsanti */
     .stButton > button {
         border-radius: 10px;
         font-weight: 800;
@@ -124,7 +118,6 @@ st.markdown(
         font-weight: 800;
     }
 
-    /* Divider */
     hr {
         margin-top: 1rem;
         margin-bottom: 1.5rem;
@@ -134,6 +127,11 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+
+# =========================================================
+# TESTATA
+# =========================================================
 
 st.markdown(
     '<div class="main-title">🎯 Estrazioni Promozioni - STARCASINO</div>',
@@ -168,7 +166,7 @@ promozione_selezionata = st.selectbox(
     "Seleziona promozione",
     options=[
         "🎯 Promo Betradar attuale",
-        "🏆 5evetsWin",
+        "⚽ 3moreEvents",
     ],
     label_visibility="collapsed",
 )
@@ -201,7 +199,7 @@ if promozione_selezionata == "🎯 Promo Betradar attuale":
     )
 
     # =====================================================
-    # INTERFACCIA FILTRI
+    # FILTRI
     # =====================================================
 
     data_vendita_da = st.date_input(
@@ -274,13 +272,18 @@ if promozione_selezionata == "🎯 Promo Betradar attuale":
     )
 
     # =====================================================
-    # BOTTONE GENERA
+    # ESTRAZIONE
     # =====================================================
 
-    if st.button("Genera CSV", key="genera_csv_betradar"):
+    if st.button(
+        "Genera CSV",
+        key="genera_csv_betradar",
+    ):
 
         if data_vendita_da is None:
-            st.error("Devi inserire una data vendita da cui iniziare l'estrazione.")
+            st.error(
+                "Devi inserire una data vendita da cui iniziare l'estrazione."
+            )
             st.stop()
 
         data_vendita_da_str = (
@@ -288,99 +291,133 @@ if promozione_selezionata == "🎯 Promo Betradar attuale":
             f"{ora_vendita_da.strftime('%H:%M:%S')}"
         )
 
-        betradar_list = list(dict.fromkeys(
-            x.strip()
-            for x in betradar_input.split(",")
-            if x.strip()
-        ))
+        betradar_list = list(
+            dict.fromkeys(
+                x.strip()
+                for x in betradar_input.split(",")
+                if x.strip()
+            )
+        )
 
         if not betradar_list:
-            st.error("Devi inserire almeno un betradar_id.")
+            st.error(
+                "Devi inserire almeno un betradar_id."
+            )
             st.stop()
 
-        mercato_list = list(dict.fromkeys(
-            x.strip()
-            for x in mercato_input.split(",")
-            if x.strip()
-        ))
-
-        # =============================================
-        # PASSAGGIO FILTRI A promo.py
-        # =============================================
+        mercato_list = list(
+            dict.fromkeys(
+                x.strip()
+                for x in mercato_input.split(",")
+                if x.strip()
+            )
+        )
 
         promo.DATA_VENDITA_DA = data_vendita_da_str
         promo.BETRADAR_ID_LIST = betradar_list
         promo.QUOTA_MIN_TUTTI_EVENTI = float(quota_min)
         promo.IS_SISTEMA = int(is_sistema)
-        promo.CF = cf_input.strip().upper() if cf_input.strip() else None
-        promo.DES_SCOM_LIST = mercato_list if mercato_list else None
+        promo.CF = (
+            cf_input.strip().upper()
+            if cf_input.strip()
+            else None
+        )
+        promo.DES_SCOM_LIST = (
+            mercato_list
+            if mercato_list
+            else None
+        )
 
-        st.info("Estrazione dati in corso...")
+        st.info(
+            "Estrazione dati in corso..."
+        )
 
-        st.write(f"Data vendita da: {promo.DATA_VENDITA_DA}")
-        st.write(f"Betradar richiesti: {', '.join(betradar_list)}")
-        st.write(f"Numero eventi richiesto: {len(betradar_list)}")
-        st.write(f"Quota minima: {promo.QUOTA_MIN_TUTTI_EVENTI}")
-        st.write(f"is_sistema: {promo.IS_SISTEMA}")
+        st.write(
+            f"Data vendita da: {promo.DATA_VENDITA_DA}"
+        )
+        st.write(
+            f"Betradar richiesti: {', '.join(betradar_list)}"
+        )
+        st.write(
+            f"Numero eventi richiesto: {len(betradar_list)}"
+        )
+        st.write(
+            f"Quota minima: {promo.QUOTA_MIN_TUTTI_EVENTI}"
+        )
+        st.write(
+            f"is_sistema: {promo.IS_SISTEMA}"
+        )
         st.write(
             f"Mercato: "
             f"{promo.DES_SCOM_LIST if promo.DES_SCOM_LIST else 'TUTTI'}"
         )
 
         if promo.CF:
-            st.write(f"CF filtrato: {promo.CF}")
+            st.write(
+                f"CF filtrato: {promo.CF}"
+            )
 
         if importo_giocato_min > 0:
-            st.write(f"Importo Giocato minimo: {importo_giocato_min}")
+            st.write(
+                f"Importo Giocato minimo: {importo_giocato_min}"
+            )
 
         if importo_giocato_max > 0:
-            st.write(f"Importo Giocato massimo: {importo_giocato_max}")
-
-        # =============================================
-        # ESTRAZIONE DATI
-        # =============================================
+            st.write(
+                f"Importo Giocato massimo: {importo_giocato_max}"
+            )
 
         try:
             df = promo.estrai_dati()
+
         except Exception as e:
-            st.error("Errore durante l'estrazione dati dal database.")
+            st.error(
+                "Errore durante l'estrazione dati dal database."
+            )
             st.exception(e)
             st.stop()
 
         if df is None or df.empty:
-            st.error("Nessun dato trovato dal database.")
+            st.error(
+                "Nessun dato trovato dal database."
+            )
             st.stop()
 
-        st.success(f"Righe lette dal database: {len(df)}")
-
-        # =============================================
-        # NORMALIZZAZIONE E FILTRO QUOTA
-        # =============================================
+        st.success(
+            f"Righe lette dal database: {len(df)}"
+        )
 
         try:
             df = promo.normalizza_output(df)
             df = promo.applica_filtro_quota_tutti_eventi(df)
+
         except Exception as e:
-            st.error("Errore durante la normalizzazione o il filtro quota.")
+            st.error(
+                "Errore durante la normalizzazione o il filtro quota."
+            )
             st.exception(e)
             st.stop()
 
         if df is None or df.empty:
-            st.warning("Nessun ticket valido dopo il filtro quota.")
+            st.warning(
+                "Nessun ticket valido dopo il filtro quota."
+            )
             st.stop()
 
-        # =============================================
+        # =================================================
         # FILTRO IMPORTO GIOCATO
-        # =============================================
+        # =================================================
 
         if importo_giocato_min > 0:
             df = df[
-                df["importo_pagato"] >= float(importo_giocato_min)
+                df["importo_pagato"]
+                >= float(importo_giocato_min)
             ].copy()
 
         if importo_giocato_max > 0:
             df = df[
-                df["importo_pagato"] <= float(importo_giocato_max)
+                df["importo_pagato"]
+                <= float(importo_giocato_max)
             ].copy()
 
         if df.empty:
@@ -389,9 +426,9 @@ if promozione_selezionata == "🎯 Promo Betradar attuale":
             )
             st.stop()
 
-        # =============================================
-        # CREAZIONE OUTPUT TICKET / CF
-        # =============================================
+        # =================================================
+        # OUTPUT
+        # =================================================
 
         colonne_ticket = [
             "id_ticket",
@@ -415,32 +452,51 @@ if promozione_selezionata == "🎯 Promo Betradar attuale":
             st.error(
                 "Mancano alcune colonne necessarie nel dataframe finale:"
             )
-            st.write(colonne_mancanti)
-            st.write("Colonne disponibili nel dataframe:")
-            st.write(list(df.columns))
+            st.write(
+                colonne_mancanti
+            )
+            st.write(
+                "Colonne disponibili nel dataframe:"
+            )
+            st.write(
+                list(df.columns)
+            )
             st.stop()
 
         ticket_cf = (
             df[colonne_ticket]
-            .drop_duplicates(subset=["id_ticket", "cf"])
+            .drop_duplicates(
+                subset=["id_ticket", "cf"]
+            )
             .sort_values(
-                by=["nome_commerciale", "cf", "id_ticket"]
+                by=[
+                    "nome_commerciale",
+                    "cf",
+                    "id_ticket",
+                ]
             )
             .reset_index(drop=True)
         )
 
-        ticket_cf = ticket_cf.rename(columns={
-            "des_scom": "Mercato",
-            "importo_pagato": "Importo Giocato",
-            "importo_vincita_potenziale": "Importo Vincita Potenziale",
-        })
+        ticket_cf = ticket_cf.rename(
+            columns={
+                "des_scom": "Mercato",
+                "importo_pagato": "Importo Giocato",
+                "importo_vincita_potenziale":
+                    "Importo Vincita Potenziale",
+            }
+        )
 
         st.success(
-            f"Ticket trovati: {ticket_cf['id_ticket'].nunique()}"
+            f"Ticket trovati: "
+            f"{ticket_cf['id_ticket'].nunique()}"
         )
+
         st.write(
-            f"CF trovati: {ticket_cf['cf'].nunique()}"
+            f"CF trovati: "
+            f"{ticket_cf['cf'].nunique()}"
         )
+
         st.write(
             "Punti vendita trovati: "
             f"{ticket_cf['nome_commerciale'].nunique()}"
@@ -462,58 +518,91 @@ if promozione_selezionata == "🎯 Promo Betradar attuale":
             data=csv,
             file_name="1_starcasino_ticket_cf_filtrati.csv",
             mime="text/csv",
+            key="download_betradar_ticket",
         )
 
 
 # =========================================================
-# PROMO 2 - 5evetsWin
+# PROMO 2 - 3moreEvents
 # =========================================================
 
-elif promozione_selezionata == "🏆 5evetsWin":
+elif promozione_selezionata == "⚽ 3moreEvents":
 
     st.markdown(
         """
-        <div class="promo-card promo-win">
-            <div class="promo-card-title">🏆 5evetsWin</div>
+        <div class="promo-card promo-3more">
+            <div class="promo-card-title">⚽ 3moreEvents</div>
             <div class="promo-card-text">
-                <b>Obiettivo:</b> individuare i ticket composti esattamente dagli
-                eventi Betradar selezionati e contare, per ogni singolo ticket,
-                quanti eventi hanno esito <b>WI</b> e quanti hanno esito <b>LO</b>.
+                <b>Obiettivo:</b> individuare i ticket con almeno un determinato
+                numero di eventi e applicare filtri sulla quota complessiva
+                del ticket e sullo sport.
                 <br><br>
-                Se inserisci 5 Betradar ID, il sistema cerca esclusivamente
-                ticket da 5 eventi composti da quegli stessi 5 eventi.
+                <b>Regola principale:</b>
+                <code>num_eventi &gt;= valore impostato</code>.
+                Il valore predefinito è <b>3</b>.
+                <br><br>
+                La quota ticket viene calcolata utilizzando la variabile
+                <code>quota</code> presente in <code>Ticket_Detail</code>.
+                Gli sport selezionabili sono <b>CALCIO</b> e <b>TENNIS</b>.
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+    # =====================================================
+    # FILTRI
+    # =====================================================
+
     data_vendita_da = st.date_input(
         "Data vendita da",
         value=None,
         format="DD/MM/YYYY",
-        key="5evetswin_data_vendita_da",
+        key="3more_data_vendita_da",
     )
 
     ora_vendita_da = st.time_input(
         "Ora vendita da",
         value=time(0, 0),
-        key="5evetswin_ora_vendita_da",
+        key="3more_ora_vendita_da",
     )
 
-    betradar_input = st.text_area(
-        "Betradar ID separati da virgola",
-        value="53452557,53452541,53452547,53452561,53452543",
-        key="5evetswin_betradar_input",
+    numero_eventi_min = st.number_input(
+        "Numero Eventi minimo - num_eventi >=",
+        min_value=1,
+        value=3,
+        step=1,
+        key="3more_num_eventi_min",
     )
 
-    quota_min = st.number_input(
-        "Quota minima su tutti gli eventi",
+    quota_ticket_min = st.number_input(
+        "Quota ticket minima",
         min_value=0.0,
         value=1.0,
         step=0.1,
         format="%.2f",
-        key="5evetswin_quota_min",
+        key="3more_quota_ticket_min",
+        help=(
+            "La quota ticket viene calcolata utilizzando "
+            "Ticket_Detail.quota."
+        ),
+    )
+
+    sport_selezionati = st.multiselect(
+        "Sport ammessi - des_sport",
+        options=[
+            "CALCIO",
+            "TENNIS",
+        ],
+        default=[
+            "CALCIO",
+            "TENNIS",
+        ],
+        key="3more_des_sport",
+        help=(
+            "Per impostazione predefinita sono selezionati "
+            "CALCIO e TENNIS."
+        ),
     )
 
     is_sistema = st.selectbox(
@@ -524,19 +613,19 @@ elif promozione_selezionata == "🏆 5evetsWin":
             if x == 0
             else "Solo sistemi - is_sistema=1"
         ),
-        key="5evetswin_is_sistema",
+        key="3more_is_sistema",
     )
 
     cf_input = st.text_input(
         "CF specifico opzionale",
         value="",
-        key="5evetswin_cf_input",
+        key="3more_cf_input",
     )
 
     mercato_input = st.text_input(
         "Mercato opzionale - des_scom, separa più valori con virgola",
         value="",
-        key="5evetswin_mercato_input",
+        key="3more_mercato_input",
     )
 
     importo_giocato_min = st.number_input(
@@ -545,7 +634,7 @@ elif promozione_selezionata == "🏆 5evetsWin":
         value=0.0,
         step=1.0,
         format="%.2f",
-        key="5evetswin_importo_min",
+        key="3more_importo_min",
     )
 
     importo_giocato_max = st.number_input(
@@ -554,13 +643,28 @@ elif promozione_selezionata == "🏆 5evetsWin":
         value=0.0,
         step=1.0,
         format="%.2f",
-        key="5evetswin_importo_max",
+        key="3more_importo_max",
     )
 
-    if st.button("Genera CSV 5evetsWin", key="genera_csv_5evetswin"):
+    # =====================================================
+    # ESTRAZIONE
+    # =====================================================
+
+    if st.button(
+        "Genera CSV 3moreEvents",
+        key="genera_csv_3moreEvents",
+    ):
 
         if data_vendita_da is None:
-            st.error("Devi inserire una data vendita da cui iniziare l'estrazione.")
+            st.error(
+                "Devi inserire una data vendita da cui iniziare l'estrazione."
+            )
+            st.stop()
+
+        if not sport_selezionati:
+            st.error(
+                "Devi selezionare almeno uno sport tra CALCIO e TENNIS."
+            )
             st.stop()
 
         data_vendita_da_str = (
@@ -568,101 +672,130 @@ elif promozione_selezionata == "🏆 5evetsWin":
             f"{ora_vendita_da.strftime('%H:%M:%S')}"
         )
 
-        betradar_list = list(dict.fromkeys(
-            x.strip()
-            for x in betradar_input.split(",")
-            if x.strip()
-        ))
+        mercato_list = list(
+            dict.fromkeys(
+                x.strip()
+                for x in mercato_input.split(",")
+                if x.strip()
+            )
+        )
 
-        mercato_list = list(dict.fromkeys(
-            x.strip()
-            for x in mercato_input.split(",")
-            if x.strip()
-        ))
+        promo_3moreEvents.DATA_VENDITA_DA = (
+            data_vendita_da_str
+        )
 
-        if not betradar_list:
-            st.error("Devi inserire almeno un Betradar ID.")
-            st.stop()
+        promo_3moreEvents.NUM_EVENTI_MIN = (
+            int(numero_eventi_min)
+        )
 
-        promo_5evetswin.DATA_VENDITA_DA = data_vendita_da_str
-        promo_5evetswin.BETRADAR_ID_LIST = betradar_list
-        promo_5evetswin.QUOTA_MIN_TUTTI_EVENTI = float(quota_min)
-        promo_5evetswin.IS_SISTEMA = int(is_sistema)
-        promo_5evetswin.CF = (
+        promo_3moreEvents.QUOTA_TICKET_MIN = (
+            float(quota_ticket_min)
+        )
+
+        promo_3moreEvents.DES_SPORT_LIST = (
+            list(sport_selezionati)
+        )
+
+        promo_3moreEvents.IS_SISTEMA = (
+            int(is_sistema)
+        )
+
+        promo_3moreEvents.CF = (
             cf_input.strip().upper()
             if cf_input.strip()
             else None
         )
-        promo_5evetswin.DES_SCOM_LIST = (
-            mercato_list if mercato_list else None
+
+        promo_3moreEvents.DES_SCOM_LIST = (
+            mercato_list
+            if mercato_list
+            else None
         )
 
-        st.info("Estrazione dati 5evetsWin in corso...")
+        st.info(
+            "Estrazione dati 3moreEvents in corso..."
+        )
 
-        st.write(f"Data vendita da: {promo_5evetswin.DATA_VENDITA_DA}")
-        st.write(f"Numero eventi esatto: {len(betradar_list)}")
         st.write(
-            f"Regola eventi: num_eventi = {len(betradar_list)}"
+            f"Data vendita da: "
+            f"{promo_3moreEvents.DATA_VENDITA_DA}"
         )
+
         st.write(
-            f"Betradar: "
-            f"{', '.join(betradar_list) if betradar_list else 'TUTTI'}"
+            f"Numero eventi: num_eventi >= "
+            f"{promo_3moreEvents.NUM_EVENTI_MIN}"
         )
+
         st.write(
-            f"Quota minima: {promo_5evetswin.QUOTA_MIN_TUTTI_EVENTI}"
+            f"Quota ticket minima: "
+            f"{promo_3moreEvents.QUOTA_TICKET_MIN}"
         )
-        st.write(f"is_sistema: {promo_5evetswin.IS_SISTEMA}")
+
+        st.write(
+            f"Sport ammessi: "
+            f"{', '.join(promo_3moreEvents.DES_SPORT_LIST)}"
+        )
+
+        st.write(
+            f"is_sistema: "
+            f"{promo_3moreEvents.IS_SISTEMA}"
+        )
+
         st.write(
             f"Mercato: "
-            f"{promo_5evetswin.DES_SCOM_LIST if promo_5evetswin.DES_SCOM_LIST else 'TUTTI'}"
+            f"{promo_3moreEvents.DES_SCOM_LIST if promo_3moreEvents.DES_SCOM_LIST else 'TUTTI'}"
         )
 
-        if promo_5evetswin.CF:
-            st.write(f"CF filtrato: {promo_5evetswin.CF}")
+        if promo_3moreEvents.CF:
+            st.write(
+                f"CF filtrato: "
+                f"{promo_3moreEvents.CF}"
+            )
 
         if importo_giocato_min > 0:
-            st.write(f"Importo Giocato minimo: {importo_giocato_min}")
+            st.write(
+                f"Importo Giocato minimo: "
+                f"{importo_giocato_min}"
+            )
 
         if importo_giocato_max > 0:
-            st.write(f"Importo Giocato massimo: {importo_giocato_max}")
+            st.write(
+                f"Importo Giocato massimo: "
+                f"{importo_giocato_max}"
+            )
 
         try:
-            ticket_cf, dettaglio = promo_5evetswin.esegui_estrazione()
+            ticket_cf, dettaglio = (
+                promo_3moreEvents.esegui_estrazione()
+            )
+
         except Exception as e:
             st.error(
-                "Errore durante l'estrazione o classificazione 5evetsWin."
+                "Errore durante l'estrazione 3moreEvents."
             )
             st.exception(e)
             st.stop()
 
         if ticket_cf is None or ticket_cf.empty:
-            st.warning("Nessun ticket trovato con i filtri impostati.")
+            st.warning(
+                "Nessun ticket trovato con i filtri impostati."
+            )
             st.stop()
 
+        # =================================================
+        # FILTRO IMPORTO GIOCATO
+        # =================================================
+
         if importo_giocato_min > 0:
-            ticket_validi = ticket_cf[
-                ticket_cf["Importo Giocato"] >= float(importo_giocato_min)
-            ]["id_ticket"]
-
             ticket_cf = ticket_cf[
-                ticket_cf["id_ticket"].isin(ticket_validi)
-            ].copy()
-
-            dettaglio = dettaglio[
-                dettaglio["id_ticket"].isin(ticket_validi)
+                ticket_cf["Importo Giocato"]
+                >= float(importo_giocato_min)
             ].copy()
 
         if importo_giocato_max > 0:
-            ticket_validi = ticket_cf[
-                ticket_cf["Importo Giocato"] <= float(importo_giocato_max)
-            ]["id_ticket"]
-
             ticket_cf = ticket_cf[
-                ticket_cf["id_ticket"].isin(ticket_validi)
-            ].copy()
-
-            dettaglio = dettaglio[
-                dettaglio["id_ticket"].isin(ticket_validi)
+                ticket_cf["Importo Giocato"]
+                <= float(importo_giocato_max)
             ].copy()
 
         if ticket_cf.empty:
@@ -671,27 +804,57 @@ elif promozione_selezionata == "🏆 5evetsWin":
             )
             st.stop()
 
-        st.success(
-            f"Ticket trovati: {ticket_cf['id_ticket'].nunique()}"
+        # =================================================
+        # ALLINEA DETTAGLIO AI TICKET RIMASTI
+        # =================================================
+
+        ticket_validi = set(
+            ticket_cf["id_ticket"]
+            .astype(str)
+            .tolist()
         )
-        st.write(f"CF trovati: {ticket_cf['cf'].nunique()}")
+
+        if (
+            dettaglio is not None
+            and not dettaglio.empty
+        ):
+            dettaglio = dettaglio[
+                dettaglio["id_ticket"]
+                .astype(str)
+                .isin(ticket_validi)
+            ].copy()
+
+        # =================================================
+        # RISULTATI
+        # =================================================
+
+        st.success(
+            f"Ticket trovati: "
+            f"{ticket_cf['id_ticket'].nunique()}"
+        )
+
+        st.write(
+            f"CF trovati: "
+            f"{ticket_cf['cf'].nunique()}"
+        )
+
         st.write(
             "Punti vendita trovati: "
             f"{ticket_cf['nome_commerciale'].nunique()}"
         )
 
-        st.subheader("Ticket estratti")
-
-        st.write(
-            "Le colonne eventi_WI ed eventi_LO indicano, per ogni ticket, "
-            "quanti eventi hanno rispettivamente cod_stato_esito = WI "
-            "e cod_stato_esito = LO."
+        st.subheader(
+            "Ticket estratti"
         )
 
         st.dataframe(
             ticket_cf,
             use_container_width=True,
         )
+
+        # =================================================
+        # DOWNLOAD CSV TICKET
+        # =================================================
 
         csv_ticket = ticket_cf.to_csv(
             sep=";",
@@ -700,21 +863,32 @@ elif promozione_selezionata == "🏆 5evetsWin":
         ).encode("utf-8-sig")
 
         st.download_button(
-            label="Scarica CSV ticket con conteggio WI/LO",
+            label="Scarica CSV ticket 3moreEvents",
             data=csv_ticket,
-            file_name="1_5evetswin_ticket_WI_LO.csv",
+            file_name="1_3moreEvents_ticket.csv",
             mime="text/csv",
+            key="download_3more_ticket",
         )
 
-        csv_dettaglio = dettaglio.to_csv(
-            sep=";",
-            index=False,
-            decimal=",",
-        ).encode("utf-8-sig")
+        # =================================================
+        # DOWNLOAD CSV DETTAGLIO
+        # =================================================
 
-        st.download_button(
-            label="Scarica CSV dettaglio eventi",
-            data=csv_dettaglio,
-            file_name="2_5evetswin_dettaglio_eventi.csv",
-            mime="text/csv",
-        )
+        if (
+            dettaglio is not None
+            and not dettaglio.empty
+        ):
+
+            csv_dettaglio = dettaglio.to_csv(
+                sep=";",
+                index=False,
+                decimal=",",
+            ).encode("utf-8-sig")
+
+            st.download_button(
+                label="Scarica CSV dettaglio eventi 3moreEvents",
+                data=csv_dettaglio,
+                file_name="2_3moreEvents_dettaglio_eventi.csv",
+                mime="text/csv",
+                key="download_3more_dettaglio",
+            )
