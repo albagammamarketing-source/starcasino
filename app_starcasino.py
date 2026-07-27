@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import time
 import promo
 import promo_5evetswin
-import promo_3moreEvents
+import promo_3moreevents
 
 
 # =========================================================
@@ -642,53 +642,53 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             if x.strip()
         ))
 
-        promo_3moreEvents.DATA_VENDITA_DA = data_vendita_da_str
-        promo_3moreEvents.NUM_EVENTI_MIN = int(num_eventi_min)
-        promo_3moreEvents.QUOTA_MIN_TUTTI_EVENTI = float(quota_min)
-        promo_3moreEvents.QUOTA_TICKET_MIN = float(quota_ticket_min)
-        promo_3moreEvents.DES_SPORT_LIST = (
+        promo_3moreevents.DATA_VENDITA_DA = data_vendita_da_str
+        promo_3moreevents.NUM_EVENTI_MIN = int(num_eventi_min)
+        promo_3moreevents.QUOTA_MIN_TUTTI_EVENTI = float(quota_min)
+        promo_3moreevents.QUOTA_TICKET_MIN = float(quota_ticket_min)
+        promo_3moreevents.DES_SPORT_LIST = (
             sport_selezionati if sport_selezionati else None
         )
-        promo_3moreEvents.COD_MANIF_LIST = (
+        promo_3moreevents.COD_MANIF_LIST = (
             cod_manif_list if cod_manif_list else None
         )
-        promo_3moreEvents.IS_SISTEMA = int(is_sistema)
-        promo_3moreEvents.CF = (
+        promo_3moreevents.IS_SISTEMA = int(is_sistema)
+        promo_3moreevents.CF = (
             cf_input.strip().upper() if cf_input.strip() else None
         )
-        promo_3moreEvents.DES_SCOM_LIST = (
+        promo_3moreevents.DES_SCOM_LIST = (
             mercato_list if mercato_list else None
         )
 
         st.info("Estrazione dati 3moreEvents in corso...")
 
-        st.write(f"Data vendita da: {promo_3moreEvents.DATA_VENDITA_DA}")
+        st.write(f"Data vendita da: {promo_3moreevents.DATA_VENDITA_DA}")
         st.write(
-            f"Numero eventi: num_eventi >= {promo_3moreEvents.NUM_EVENTI_MIN}"
+            f"Numero eventi: num_eventi >= {promo_3moreevents.NUM_EVENTI_MIN}"
         )
         st.write(
             "Quota minima per ogni evento: "
-            f"{promo_3moreEvents.QUOTA_MIN_TUTTI_EVENTI}"
+            f"{promo_3moreevents.QUOTA_MIN_TUTTI_EVENTI}"
         )
         st.write(
             "Quota minima del ticket: "
-            f"{promo_3moreEvents.QUOTA_TICKET_MIN if promo_3moreEvents.QUOTA_TICKET_MIN > 0 else 'NESSUN FILTRO'}"
+            f"{promo_3moreevents.QUOTA_TICKET_MIN if promo_3moreevents.QUOTA_TICKET_MIN > 0 else 'NESSUN FILTRO'}"
         )
         st.write(
             "Sport ammessi: "
-            f"{promo_3moreEvents.DES_SPORT_LIST or 'TUTTI'}"
+            f"{promo_3moreevents.DES_SPORT_LIST or 'TUTTI'}"
         )
         st.write(
             "Codici manifestazione: "
-            f"{promo_3moreEvents.COD_MANIF_LIST or 'TUTTI'}"
+            f"{promo_3moreevents.COD_MANIF_LIST or 'TUTTI'}"
         )
-        st.write(f"is_sistema: {promo_3moreEvents.IS_SISTEMA}")
+        st.write(f"is_sistema: {promo_3moreevents.IS_SISTEMA}")
         st.write(
-            f"Mercato: {promo_3moreEvents.DES_SCOM_LIST or 'TUTTI'}"
+            f"Mercato: {promo_3moreevents.DES_SCOM_LIST or 'TUTTI'}"
         )
 
-        if promo_3moreEvents.CF:
-            st.write(f"CF filtrato: {promo_3moreEvents.CF}")
+        if promo_3moreevents.CF:
+            st.write(f"CF filtrato: {promo_3moreevents.CF}")
 
         if importo_giocato_min > 0:
             st.write(f"Importo Giocato minimo: {importo_giocato_min}")
@@ -697,7 +697,7 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             st.write(f"Importo Giocato massimo: {importo_giocato_max}")
 
         try:
-            ticket_cf, dettaglio = promo_3moreEvents.esegui_estrazione()
+            ticket_cf, dettaglio = promo_3moreevents.esegui_estrazione()
         except Exception as e:
             st.error("Errore durante l'estrazione 3moreEvents.")
             st.exception(e)
