@@ -489,7 +489,9 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
                 è 3 eventi.
                 <br><br>
                 La quota minima deve essere rispettata da <b>tutti gli eventi</b>
-                del ticket. È inoltre possibile filtrare sport, codici
+                del ticket. È possibile anche impostare una quota minima
+                complessiva del ticket, calcolata come prodotto delle quote
+                evento. È inoltre possibile filtrare sport, codici
                 manifestazione, mercato, tipo ticket, CF e importo giocato.
             </div>
         </div>
@@ -526,6 +528,20 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
         step=0.1,
         format="%.2f",
         key="3more_quota_min",
+        help="Ogni singolo evento del ticket deve avere almeno questa quota.",
+    )
+
+    quota_ticket_min = st.number_input(
+        "Quota minima del ticket",
+        min_value=0.0,
+        value=0.0,
+        step=0.1,
+        format="%.2f",
+        key="3more_quota_ticket_min",
+        help=(
+            "Quota complessiva calcolata moltiplicando le quote dei singoli "
+            "eventi. Lascia 0 per non applicare il filtro."
+        ),
     )
 
     sport_selezionati = st.multiselect(
@@ -629,6 +645,7 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
         promo_3moreEvents.DATA_VENDITA_DA = data_vendita_da_str
         promo_3moreEvents.NUM_EVENTI_MIN = int(num_eventi_min)
         promo_3moreEvents.QUOTA_MIN_TUTTI_EVENTI = float(quota_min)
+        promo_3moreEvents.QUOTA_TICKET_MIN = float(quota_ticket_min)
         promo_3moreEvents.DES_SPORT_LIST = (
             sport_selezionati if sport_selezionati else None
         )
@@ -652,6 +669,10 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
         st.write(
             "Quota minima per ogni evento: "
             f"{promo_3moreEvents.QUOTA_MIN_TUTTI_EVENTI}"
+        )
+        st.write(
+            "Quota minima del ticket: "
+            f"{promo_3moreEvents.QUOTA_TICKET_MIN if promo_3moreEvents.QUOTA_TICKET_MIN > 0 else 'NESSUN FILTRO'}"
         )
         st.write(
             "Sport ammessi: "

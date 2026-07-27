@@ -41,6 +41,8 @@ DES_STATO = None
 IS_SISTEMA = 0
 NUM_EVENTI_MIN = 3
 QUOTA_MIN_TUTTI_EVENTI = 1.5
+# 0 oppure None = nessun filtro sulla quota complessiva del ticket.
+QUOTA_TICKET_MIN = 0.0
 DES_SPORT_LIST = ["CALCIO", "TENNIS"]
 COD_MANIF_LIST = None
 CF = None
@@ -254,6 +256,14 @@ def normalizza_output(df: pd.DataFrame) -> pd.DataFrame:
     ).round(2)
     df["quota_evento"] = (df["quota"] / 100).round(3)
 
+    # La quota complessiva del ticket viene calcolata come prodotto
+    # delle quote dei singoli eventi presenti in Ticket_Detail.
+    df["quota_ticket"] = (
+        df.groupby("id_ticket")["quota_evento"]
+        .transform("prod")
+        .round(3)
+    )
+
     return df
 
 
@@ -265,6 +275,21 @@ def applica_filtro_quota_tutti_eventi(df: pd.DataFrame) -> pd.DataFrame:
         df.groupby("id_ticket")["quota_evento"]
         .min()
         .loc[lambda s: s >= float(QUOTA_MIN_TUTTI_EVENTI)]
+        .index
+    )
+
+    return df[df["id_ticket"].isin(ticket_validi)].copy()
+
+
+def applica_filtro_quota_ticket(df: pd.DataFrame) -> pd.DataFrame:
+    """Mantiene i ticket con quota complessiva >= QUOTA_TICKET_MIN."""
+    if df.empty or QUOTA_TICKET_MIN is None or float(QUOTA_TICKET_MIN) <= 0:
+        return df.copy()
+
+    ticket_validi = (
+        df.groupby("id_ticket")["quota_ticket"]
+        .first()
+        .loc[lambda s: s >= float(QUOTA_TICKET_MIN)]
         .index
     )
 
@@ -287,6 +312,7 @@ def crea_output_ticket(df: pd.DataFrame) -> pd.DataFrame:
         "Sport",
         "Codici manifestazione",
         "Quota minima evento",
+        "Quota ticket",
         "Mercato",
         "Importo Giocato",
         "Importo Vincita Potenziale",
@@ -311,6 +337,7 @@ def crea_output_ticket(df: pd.DataFrame) -> pd.DataFrame:
                     lambda s: ", ".join(sorted(set(x for x in s if x))),
                 ),
                 "Quota minima evento": ("quota_evento", "min"),
+                "Quota ticket": ("quota_ticket", "first"),
                 "Mercato": (
                     "des_scom",
                     lambda s: ", ".join(sorted(set(x for x in s if x))),
@@ -346,6 +373,7 @@ def crea_output_dettaglio(df: pd.DataFrame) -> pd.DataFrame:
         "Mercato",
         "des_eve",
         "quota_evento",
+        "quota_ticket",
         "cod_stato_esito",
         "Importo Giocato",
         "Importo Vincita Potenziale",
@@ -398,6 +426,7 @@ def esegui_estrazione() -> tuple[pd.DataFrame, pd.DataFrame]:
 
     df = normalizza_output(df)
     df = applica_filtro_quota_tutti_eventi(df)
+    df = applica_filtro_quota_ticket(df)
 
     return crea_output_ticket(df), crea_output_dettaglio(df)
 
@@ -418,6 +447,7 @@ def main() -> None:
     print(f"Data vendita da: {DATA_VENDITA_DA}")
     print(f"Numero eventi minimo: {NUM_EVENTI_MIN}")
     print(f"Quota minima per ogni evento: {QUOTA_MIN_TUTTI_EVENTI}")
+    print(f"Quota minima ticket: {QUOTA_TICKET_MIN or 'NESSUN FILTRO'}")
     print(f"Sport: {DES_SPORT_LIST or 'TUTTI'}")
     print(f"Codici manifestazione: {COD_MANIF_LIST or 'TUTTI'}")
     print(f"Tipo ticket: is_sistema={IS_SISTEMA}")
