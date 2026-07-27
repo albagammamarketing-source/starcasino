@@ -26,7 +26,7 @@ DB_PORT = int(os.getenv("PIPELINE_DB_PORT", "3306"))
 
 DB_CONFIG = {
     "user": os.getenv("PIPELINE_DB_USER", "dbalba11"),
-    "password": os.getenv("DB_PASSWORD"),
+    "password": os.getenv("DB_PASSWORD") or os.getenv("PIPELINE_DB_PASSWORD"),
     "host": os.getenv("PIPELINE_DB_HOST", "194.163.157.255"),
     "database": "AnalisiTickets_STARCASINO",
 }
@@ -70,7 +70,7 @@ def apri_connessione(cfg: dict):
     if not cfg.get("password"):
         raise RuntimeError(
             "Password database non configurata. "
-            "Imposta la variabile d'ambiente DB_PASSWORD."
+            "Imposta DB_PASSWORD oppure PIPELINE_DB_PASSWORD."
         )
 
     return pymysql.connect(
@@ -754,12 +754,18 @@ def main() -> None:
         )
 
         print()
-        print("Classificazioni:")
-
+        print("Distribuzione eventi WI:")
         print(
-            ticket[
-                "classificazione_events_win"
-            ]
+            ticket["eventi_WI"]
+            .value_counts()
+            .sort_index(ascending=False)
+            .to_string()
+        )
+
+        print()
+        print("Distribuzione eventi LO:")
+        print(
+            ticket["eventi_LO"]
             .value_counts()
             .sort_index(ascending=False)
             .to_string()
