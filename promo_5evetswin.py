@@ -56,6 +56,11 @@ CF = None
 # None = nessun filtro.
 DES_SCOM_LIST = None
 
+# Codice manifestazione / cod_manif opzionale.
+# None = nessun filtro.
+# È possibile passare uno o più codici.
+COD_MANIF_LIST = None
+
 
 # =========================================================
 # CONNESSIONE DATABASE
@@ -155,6 +160,28 @@ def costruisci_query() -> tuple[str, list[object]]:
         where_clauses.append("UPPER(TRIM(tg.cf)) = %s")
         params.append(filtro_cf.upper())
 
+    if COD_MANIF_LIST:
+        cod_manif_list = list(dict.fromkeys(
+            str(x).strip()
+            for x in COD_MANIF_LIST
+            if str(x).strip()
+        ))
+
+        if cod_manif_list:
+            cod_manif_placeholders = ",".join(["%s"] * len(cod_manif_list))
+            where_clauses.append(
+                f"""
+                EXISTS (
+                    SELECT 1
+                    FROM Ticket_Detail td_manif
+                    WHERE td_manif.id_ticket = tg.id_ticket
+                      AND TRIM(CAST(td_manif.cod_manif AS CHAR))
+                          IN ({cod_manif_placeholders})
+                )
+                """
+            )
+            params.extend(cod_manif_list)
+
     if DES_SCOM_LIST:
         des_scom_list = list(dict.fromkeys(
             str(x).strip()
@@ -198,6 +225,7 @@ def costruisci_query() -> tuple[str, list[object]]:
             tg.importo_vincita_eur,
             td.betradar_id,
             td.des_sport,
+            td.cod_manif,
             td.des_manif,
             td.des_scom,
             td.des_eve,
@@ -250,6 +278,7 @@ def normalizza_output(df: pd.DataFrame) -> pd.DataFrame:
         "data_ora_vend",
         "betradar_id",
         "des_sport",
+        "cod_manif",
         "des_manif",
         "des_scom",
         "des_eve",
@@ -579,6 +608,7 @@ def crea_output_dettaglio(
         "eventi_LO",
         "betradar_id",
         "des_sport",
+        "cod_manif",
         "des_manif",
         "des_scom",
         "des_eve",
@@ -693,6 +723,7 @@ def main() -> None:
     )
     print(f"Filtro stato ticket: {DES_STATO or 'TUTTI'}")
     print(f"Filtro is_sistema: {IS_SISTEMA}")
+    print(f"Codice manifestazione: {COD_MANIF_LIST if COD_MANIF_LIST else 'TUTTI'}")
     print(
         f"Quota minima su tutti gli eventi: "
         f"{QUOTA_MIN_TUTTI_EVENTI}"
