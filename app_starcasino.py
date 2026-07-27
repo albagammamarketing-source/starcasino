@@ -2,6 +2,7 @@ import streamlit as st
 from datetime import time
 import promo
 import promo_5evetswin
+import promo_3moreEvents
 
 
 # =========================================================
@@ -96,6 +97,12 @@ st.markdown(
         border-left: 6px solid #2563eb;
     }
 
+    .promo-more {
+        background: #eefbf3;
+        border-color: #a7dfba;
+        border-left: 6px solid #16a34a;
+    }
+
     .promo-win {
         background: #fff8e8;
         border-color: #f5d889;
@@ -168,6 +175,7 @@ promozione_selezionata = st.selectbox(
     "Seleziona promozione",
     options=[
         "🎯 Promo Betradar attuale",
+        "🎟️ 3moreEvents",
         "🏆 5evetsWin",
     ],
     label_visibility="collapsed",
@@ -466,7 +474,288 @@ if promozione_selezionata == "🎯 Promo Betradar attuale":
 
 
 # =========================================================
-# PROMO 2 - 5evetsWin
+# PROMO 2 - 3moreEvents
+# =========================================================
+
+elif promozione_selezionata == "🎟️ 3moreEvents":
+
+    st.markdown(
+        """
+        <div class="promo-card promo-more">
+            <div class="promo-card-title">🎟️ 3moreEvents</div>
+            <div class="promo-card-text">
+                <b>Obiettivo:</b> individuare ticket con un numero di eventi
+                maggiore o uguale alla soglia impostata. Il valore predefinito
+                è 3 eventi.
+                <br><br>
+                La quota minima deve essere rispettata da <b>tutti gli eventi</b>
+                del ticket. È inoltre possibile filtrare sport, codici
+                manifestazione, mercato, tipo ticket, CF e importo giocato.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    data_vendita_da = st.date_input(
+        "Data vendita da",
+        value=None,
+        format="DD/MM/YYYY",
+        key="3more_data_vendita_da",
+    )
+
+    ora_vendita_da = st.time_input(
+        "Ora vendita da",
+        value=time(0, 0),
+        key="3more_ora_vendita_da",
+    )
+
+    num_eventi_min = st.number_input(
+        "Numero minimo di eventi del ticket",
+        min_value=1,
+        value=3,
+        step=1,
+        key="3more_num_eventi_min",
+        help="Saranno estratti i ticket con num_eventi maggiore o uguale a questo valore.",
+    )
+
+    quota_min = st.number_input(
+        "Quota minima per ogni evento",
+        min_value=0.0,
+        value=1.5,
+        step=0.1,
+        format="%.2f",
+        key="3more_quota_min",
+    )
+
+    sport_selezionati = st.multiselect(
+        "Sport ammessi nel ticket",
+        options=[
+            "CALCIO",
+            "TENNIS",
+            "BASKET",
+            "PALLAVOLO",
+            "HOCKEY",
+            "BASEBALL",
+            "RUGBY",
+            "ALTRO",
+        ],
+        default=["CALCIO", "TENNIS"],
+        key="3more_sport",
+        help=(
+            "Il ticket viene accettato solo se tutti i suoi eventi appartengono "
+            "agli sport selezionati. Nessuna selezione significa tutti gli sport."
+        ),
+    )
+
+    cod_manif_input = st.text_input(
+        "Codice manifestazione opzionale - cod_manif, separa più valori con virgola",
+        value="",
+        key="3more_cod_manif",
+        help=(
+            "Il ticket viene accettato se almeno un evento contiene uno dei "
+            "codici manifestazione inseriti."
+        ),
+    )
+
+    is_sistema = st.selectbox(
+        "Tipo ticket",
+        options=[0, 1],
+        format_func=lambda x: (
+            "Solo ticket singoli - is_sistema=0"
+            if x == 0
+            else "Solo sistemi - is_sistema=1"
+        ),
+        key="3more_is_sistema",
+    )
+
+    cf_input = st.text_input(
+        "CF specifico opzionale",
+        value="",
+        key="3more_cf_input",
+    )
+
+    mercato_input = st.text_input(
+        "Mercato opzionale - des_scom, separa più valori con virgola",
+        value="",
+        key="3more_mercato_input",
+        help=(
+            "Quando impostato, il ticket deve contenere un solo mercato distinto "
+            "e tale mercato deve essere tra quelli indicati."
+        ),
+    )
+
+    importo_giocato_min = st.number_input(
+        "Importo Giocato minimo opzionale",
+        min_value=0.0,
+        value=0.0,
+        step=1.0,
+        format="%.2f",
+        key="3more_importo_min",
+    )
+
+    importo_giocato_max = st.number_input(
+        "Importo Giocato massimo opzionale - lascia 0 per non applicare limite massimo",
+        min_value=0.0,
+        value=0.0,
+        step=1.0,
+        format="%.2f",
+        key="3more_importo_max",
+    )
+
+    if st.button("Genera CSV 3moreEvents", key="genera_csv_3more"):
+
+        if data_vendita_da is None:
+            st.error("Devi inserire una data vendita da cui iniziare l'estrazione.")
+            st.stop()
+
+        data_vendita_da_str = (
+            f"{data_vendita_da.strftime('%Y-%m-%d')} "
+            f"{ora_vendita_da.strftime('%H:%M:%S')}"
+        )
+
+        cod_manif_list = list(dict.fromkeys(
+            x.strip()
+            for x in cod_manif_input.split(",")
+            if x.strip()
+        ))
+
+        mercato_list = list(dict.fromkeys(
+            x.strip()
+            for x in mercato_input.split(",")
+            if x.strip()
+        ))
+
+        promo_3moreEvents.DATA_VENDITA_DA = data_vendita_da_str
+        promo_3moreEvents.NUM_EVENTI_MIN = int(num_eventi_min)
+        promo_3moreEvents.QUOTA_MIN_TUTTI_EVENTI = float(quota_min)
+        promo_3moreEvents.DES_SPORT_LIST = (
+            sport_selezionati if sport_selezionati else None
+        )
+        promo_3moreEvents.COD_MANIF_LIST = (
+            cod_manif_list if cod_manif_list else None
+        )
+        promo_3moreEvents.IS_SISTEMA = int(is_sistema)
+        promo_3moreEvents.CF = (
+            cf_input.strip().upper() if cf_input.strip() else None
+        )
+        promo_3moreEvents.DES_SCOM_LIST = (
+            mercato_list if mercato_list else None
+        )
+
+        st.info("Estrazione dati 3moreEvents in corso...")
+
+        st.write(f"Data vendita da: {promo_3moreEvents.DATA_VENDITA_DA}")
+        st.write(
+            f"Numero eventi: num_eventi >= {promo_3moreEvents.NUM_EVENTI_MIN}"
+        )
+        st.write(
+            "Quota minima per ogni evento: "
+            f"{promo_3moreEvents.QUOTA_MIN_TUTTI_EVENTI}"
+        )
+        st.write(
+            "Sport ammessi: "
+            f"{promo_3moreEvents.DES_SPORT_LIST or 'TUTTI'}"
+        )
+        st.write(
+            "Codici manifestazione: "
+            f"{promo_3moreEvents.COD_MANIF_LIST or 'TUTTI'}"
+        )
+        st.write(f"is_sistema: {promo_3moreEvents.IS_SISTEMA}")
+        st.write(
+            f"Mercato: {promo_3moreEvents.DES_SCOM_LIST or 'TUTTI'}"
+        )
+
+        if promo_3moreEvents.CF:
+            st.write(f"CF filtrato: {promo_3moreEvents.CF}")
+
+        if importo_giocato_min > 0:
+            st.write(f"Importo Giocato minimo: {importo_giocato_min}")
+
+        if importo_giocato_max > 0:
+            st.write(f"Importo Giocato massimo: {importo_giocato_max}")
+
+        try:
+            ticket_cf, dettaglio = promo_3moreEvents.esegui_estrazione()
+        except Exception as e:
+            st.error("Errore durante l'estrazione 3moreEvents.")
+            st.exception(e)
+            st.stop()
+
+        if ticket_cf is None or ticket_cf.empty:
+            st.warning("Nessun ticket trovato con i filtri impostati.")
+            st.stop()
+
+        if importo_giocato_min > 0:
+            ticket_validi = ticket_cf.loc[
+                ticket_cf["Importo Giocato"] >= float(importo_giocato_min),
+                "id_ticket",
+            ]
+            ticket_cf = ticket_cf[
+                ticket_cf["id_ticket"].isin(ticket_validi)
+            ].copy()
+            dettaglio = dettaglio[
+                dettaglio["id_ticket"].isin(ticket_validi)
+            ].copy()
+
+        if importo_giocato_max > 0:
+            ticket_validi = ticket_cf.loc[
+                ticket_cf["Importo Giocato"] <= float(importo_giocato_max),
+                "id_ticket",
+            ]
+            ticket_cf = ticket_cf[
+                ticket_cf["id_ticket"].isin(ticket_validi)
+            ].copy()
+            dettaglio = dettaglio[
+                dettaglio["id_ticket"].isin(ticket_validi)
+            ].copy()
+
+        if ticket_cf.empty:
+            st.warning("Nessun ticket trovato dopo il filtro Importo Giocato.")
+            st.stop()
+
+        st.success(f"Ticket trovati: {ticket_cf['id_ticket'].nunique()}")
+        st.write(f"CF trovati: {ticket_cf['cf'].nunique()}")
+        st.write(
+            "Punti vendita trovati: "
+            f"{ticket_cf['nome_commerciale'].nunique()}"
+        )
+
+        st.subheader("Ticket estratti")
+        st.dataframe(ticket_cf, use_container_width=True)
+
+        csv_ticket = ticket_cf.to_csv(
+            sep=";",
+            index=False,
+            decimal=",",
+        ).encode("utf-8-sig")
+
+        st.download_button(
+            label="Scarica CSV ticket 3moreEvents",
+            data=csv_ticket,
+            file_name="1_3moreEvents_ticket.csv",
+            mime="text/csv",
+        )
+
+        st.subheader("Dettaglio eventi")
+        st.dataframe(dettaglio, use_container_width=True)
+
+        csv_dettaglio = dettaglio.to_csv(
+            sep=";",
+            index=False,
+            decimal=",",
+        ).encode("utf-8-sig")
+
+        st.download_button(
+            label="Scarica CSV dettaglio eventi 3moreEvents",
+            data=csv_dettaglio,
+            file_name="2_3moreEvents_dettaglio_eventi.csv",
+            mime="text/csv",
+        )
+
+
+# =========================================================
+# PROMO 3 - 5evetsWin
 # =========================================================
 
 elif promozione_selezionata == "🏆 5evetsWin":
@@ -514,12 +803,6 @@ elif promozione_selezionata == "🏆 5evetsWin":
         step=0.1,
         format="%.2f",
         key="5evetswin_quota_min",
-    )
-
-    cod_manif_input = st.text_input(
-        "Codice manifestazione opzionale - cod_manif, separa più valori con virgola",
-        value="",
-        key="5evetswin_cod_manif_input",
     )
 
     is_sistema = st.selectbox(
@@ -586,12 +869,6 @@ elif promozione_selezionata == "🏆 5evetsWin":
             if x.strip()
         ))
 
-        cod_manif_list = list(dict.fromkeys(
-            x.strip()
-            for x in cod_manif_input.split(",")
-            if x.strip()
-        ))
-
         if not betradar_list:
             st.error("Devi inserire almeno un Betradar ID.")
             st.stop()
@@ -600,9 +877,6 @@ elif promozione_selezionata == "🏆 5evetsWin":
         promo_5evetswin.BETRADAR_ID_LIST = betradar_list
         promo_5evetswin.QUOTA_MIN_TUTTI_EVENTI = float(quota_min)
         promo_5evetswin.IS_SISTEMA = int(is_sistema)
-        promo_5evetswin.COD_MANIF_LIST = (
-            cod_manif_list if cod_manif_list else None
-        )
         promo_5evetswin.CF = (
             cf_input.strip().upper()
             if cf_input.strip()
@@ -627,10 +901,6 @@ elif promozione_selezionata == "🏆 5evetsWin":
             f"Quota minima: {promo_5evetswin.QUOTA_MIN_TUTTI_EVENTI}"
         )
         st.write(f"is_sistema: {promo_5evetswin.IS_SISTEMA}")
-        st.write(
-            "Codice manifestazione: "
-            f"{promo_5evetswin.COD_MANIF_LIST if promo_5evetswin.COD_MANIF_LIST else 'TUTTI'}"
-        )
         st.write(
             f"Mercato: "
             f"{promo_5evetswin.DES_SCOM_LIST if promo_5evetswin.DES_SCOM_LIST else 'TUTTI'}"
