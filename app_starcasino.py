@@ -697,7 +697,7 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             st.write(f"Importo Giocato massimo: {importo_giocato_max}")
 
         try:
-            ticket_cf, dettaglio = promo_3moreevents.esegui_estrazione()
+            ticket_cf, dettaglio, pagato_op = promo_3moreevents.esegui_estrazione()
         except Exception as e:
             st.error("Errore durante l'estrazione 3moreEvents.")
             st.exception(e)
@@ -718,6 +718,9 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             dettaglio = dettaglio[
                 dettaglio["id_ticket"].isin(ticket_validi)
             ].copy()
+            pagato_op = pagato_op[
+                pagato_op["id_ticket"].isin(ticket_validi)
+            ].copy()
 
         if importo_giocato_max > 0:
             ticket_validi = ticket_cf.loc[
@@ -729,6 +732,9 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             ].copy()
             dettaglio = dettaglio[
                 dettaglio["id_ticket"].isin(ticket_validi)
+            ].copy()
+            pagato_op = pagato_op[
+                pagato_op["id_ticket"].isin(ticket_validi)
             ].copy()
 
         if ticket_cf.empty:
@@ -771,6 +777,27 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             label="Scarica CSV dettaglio eventi 3moreEvents",
             data=csv_dettaglio,
             file_name="2_3moreEvents_dettaglio_eventi.csv",
+            mime="text/csv",
+        )
+
+
+        st.subheader("Ticket pagati con almeno un evento OP")
+        st.write(
+            "Una riga per ticket con Importo Giocato maggiore di zero "
+            "e almeno un evento con cod_stato_esito = OP."
+        )
+        st.dataframe(pagato_op, use_container_width=True)
+
+        csv_pagato_op = pagato_op.to_csv(
+            sep=";",
+            index=False,
+            decimal=",",
+        ).encode("utf-8-sig")
+
+        st.download_button(
+            label="Scarica CSV ticket pagati con evento OP",
+            data=csv_pagato_op,
+            file_name="3_3moreEvents_pagato_op.csv",
             mime="text/csv",
         )
 
