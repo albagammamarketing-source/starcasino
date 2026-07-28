@@ -564,13 +564,13 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
         ),
     )
 
-    cod_manif_input = st.text_input(
-        "Codice manifestazione opzionale - cod_manif, separa più valori con virgola",
+    manifestazione_input = st.text_input(
+        "Manifestazione opzionale - separa più valori con virgola",
         value="",
-        key="3more_cod_manif",
+        key="3more_manifestazione",
         help=(
-            "Il ticket viene accettato se almeno un evento contiene uno dei "
-            "codici manifestazione inseriti."
+            "Il ticket viene accettato se almeno un evento contiene una delle "
+            "manifestazioni inserite."
         ),
     )
 
@@ -630,9 +630,9 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             f"{ora_vendita_da.strftime('%H:%M:%S')}"
         )
 
-        cod_manif_list = list(dict.fromkeys(
+        manifestazione_list = list(dict.fromkeys(
             x.strip()
-            for x in cod_manif_input.split(",")
+            for x in manifestazione_input.split(",")
             if x.strip()
         ))
 
@@ -649,8 +649,8 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
         promo_3moreevents.DES_SPORT_LIST = (
             sport_selezionati if sport_selezionati else None
         )
-        promo_3moreevents.COD_MANIF_LIST = (
-            cod_manif_list if cod_manif_list else None
+        promo_3moreevents.MANIFESTAZIONE_LIST = (
+            manifestazione_list if manifestazione_list else None
         )
         promo_3moreevents.IS_SISTEMA = int(is_sistema)
         promo_3moreevents.CF = (
@@ -679,8 +679,8 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             f"{promo_3moreevents.DES_SPORT_LIST or 'TUTTI'}"
         )
         st.write(
-            "Codici manifestazione: "
-            f"{promo_3moreevents.COD_MANIF_LIST or 'TUTTI'}"
+            "Manifestazioni: "
+            f"{promo_3moreevents.MANIFESTAZIONE_LIST or 'TUTTE'}"
         )
         st.write(f"is_sistema: {promo_3moreevents.IS_SISTEMA}")
         st.write(
@@ -697,7 +697,7 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             st.write(f"Importo Giocato massimo: {importo_giocato_max}")
 
         try:
-            ticket_cf, dettaglio, pagato_op = promo_3moreevents.esegui_estrazione()
+            ticket_cf, dettaglio = promo_3moreevents.esegui_estrazione()
         except Exception as e:
             st.error("Errore durante l'estrazione 3moreEvents.")
             st.exception(e)
@@ -718,9 +718,6 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             dettaglio = dettaglio[
                 dettaglio["id_ticket"].isin(ticket_validi)
             ].copy()
-            pagato_op = pagato_op[
-                pagato_op["id_ticket"].isin(ticket_validi)
-            ].copy()
 
         if importo_giocato_max > 0:
             ticket_validi = ticket_cf.loc[
@@ -732,9 +729,6 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             ].copy()
             dettaglio = dettaglio[
                 dettaglio["id_ticket"].isin(ticket_validi)
-            ].copy()
-            pagato_op = pagato_op[
-                pagato_op["id_ticket"].isin(ticket_validi)
             ].copy()
 
         if ticket_cf.empty:
@@ -777,26 +771,6 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             label="Scarica CSV dettaglio eventi 3moreEvents",
             data=csv_dettaglio,
             file_name="2_3moreEvents_dettaglio_eventi.csv",
-            mime="text/csv",
-        )
-
-        st.subheader("Ticket PAGATO con almeno un evento OP")
-        st.write(
-            "Questa tabella contiene una riga per ticket con stato PAGATO "
-            "e almeno un evento con cod_stato_esito = OP."
-        )
-        st.dataframe(pagato_op, use_container_width=True)
-
-        csv_pagato_op = pagato_op.to_csv(
-            sep=";",
-            index=False,
-            decimal=",",
-        ).encode("utf-8-sig")
-
-        st.download_button(
-            label="Scarica CSV PAGATO con evento OP",
-            data=csv_pagato_op,
-            file_name="3_pagato_op.csv",
             mime="text/csv",
         )
 
