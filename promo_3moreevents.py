@@ -17,6 +17,7 @@ BASE_PATH.mkdir(parents=True, exist_ok=True)
 
 OUTPUT_CSV = BASE_PATH / "1_3moreEvents_ticket.csv"
 OUTPUT_DETTAGLIO_CSV = BASE_PATH / "2_3moreEvents_dettaglio_eventi.csv"
+OUTPUT_PAGATO_OP_CSV = BASE_PATH / "3_pagato_op.csv"
 
 
 # =========================================================
@@ -450,19 +451,115 @@ def crea_output_dettaglio(df: pd.DataFrame) -> pd.DataFrame:
     )[colonne_output]
 
 
-def esegui_estrazione() -> tuple[pd.DataFrame, pd.DataFrame]:
+def crea_output_pagato_op(df: pd.DataFrame) -> pd.DataFrame:
+    colonne_output = [
+        "id_ticket",
+        "cf",
+        "num_conto",
+        "nome_commerciale",
+        "des_stato",
+        "data_ora_vend",
+        "num_eventi",
+        "quota_ticket",
+        "eventi_OP",
+        "Mercato",
+        "Importo Giocato",
+        "Importo Vincita Potenziale",
+    ]
+
+    if df.empty:
+        return pd.DataFrame(columns=colonne_output)
+
+    df = df.copy()
+
+    ticket_con_op = (
+        df.assign(
+            _is_op=df["cod_stato_esito"]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+            .str.upper()
+            .eq("OP")
+        )
+        .groupby("id_ticket")["_is_op"]
+        .sum()
+    )
+
+    ticket_con_op = ticket_con_op[ticket_con_op > 0]
+
+    pagati = df[
+        df["des_stato"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .str.upper()
+        .eq("PAGATO")
+        & df["id_ticket"].isin(ticket_con_op.index)
+    ].copy()
+
+    if pagati.empty:
+        return pd.DataFrame(columns=colonne_output)
+
+    pagati["eventi_OP"] = pagati["id_ticket"].map(ticket_con_op).astype(int)
+
+    output = (
+        pagati[
+            [
+                "id_ticket",
+                "cf",
+                "num_conto",
+                "nome_commerciale",
+                "des_stato",
+                "data_ora_vend",
+                "num_eventi",
+                "quota_ticket",
+                "eventi_OP",
+                "des_scom",
+                "importo_pagato",
+                "importo_vincita_potenziale",
+            ]
+        ]
+        .drop_duplicates(subset=["id_ticket"])
+        .sort_values(by=["nome_commerciale", "cf", "id_ticket"])
+        .reset_index(drop=True)
+    )
+
+    output = output.rename(
+        columns={
+            "des_scom": "Mercato",
+            "importo_pagato": "Importo Giocato",
+            "importo_vincita_potenziale": "Importo Vincita Potenziale",
+        }
+    )
+
+    return output[colonne_output]
+
+
+def esegui_estrazione() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     df = estrai_dati()
 
     if df.empty:
-        return crea_output_ticket(df), crea_output_dettaglio(df)
+        return (
+            crea_output_ticket(df),
+            crea_output_dettaglio(df),
+            crea_output_pagato_op(df),
+        )
 
     df = normalizza_output(df)
     df = applica_filtri_quota(df)
 
     if df.empty:
-        return crea_output_ticket(df), crea_output_dettaglio(df)
+        return (
+            crea_output_ticket(df),
+            crea_output_dettaglio(df),
+            crea_output_pagato_op(df),
+        )
 
-    return crea_output_ticket(df), crea_output_dettaglio(df)
+    return (
+        crea_output_ticket(df),
+        crea_output_dettaglio(df),
+        crea_output_pagato_op(df),
+    )
 
 
 def salva_csv(df: pd.DataFrame, path: Path) -> None:
@@ -486,13 +583,15 @@ def main() -> None:
         f"{QUOTA_TICKET_MIN if QUOTA_TICKET_MIN else 'NESSUN FILTRO'}"
     )
 
-    ticket, dettaglio = esegui_estrazione()
+    ticket, dettaglio, pagato_op = esegui_estrazione()
 
     salva_csv(ticket, OUTPUT_CSV)
     salva_csv(dettaglio, OUTPUT_DETTAGLIO_CSV)
+    salva_csv(pagato_op, OUTPUT_PAGATO_OP_CSV)
 
     print(f"Ticket trovati: {len(ticket)}")
     print(f"Righe dettaglio: {len(dettaglio)}")
+    print(f"Ticket PAGATO con almeno un evento OP: {len(pagato_op)}")
 
 
 if __name__ == "__main__":
