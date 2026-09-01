@@ -3,6 +3,7 @@ from datetime import time
 import promo
 import promo_5evetswin
 import promo_3moreevents
+import promo_live
 
 
 # =========================================================
@@ -175,6 +176,7 @@ promozione_selezionata = st.selectbox(
     "Seleziona promozione",
     options=[
         "🎯 Promo Betradar attuale",
+        "🔴 PromoLive",
         "🎟️ 3moreEvents",
         "🏆 5evetsWin",
     ],
@@ -474,7 +476,272 @@ if promozione_selezionata == "🎯 Promo Betradar attuale":
 
 
 # =========================================================
-# PROMO 2 - 3moreEvents
+# PROMO 2 - PROMOLIVE
+# =========================================================
+
+elif promozione_selezionata == "🔴 PromoLive":
+
+    st.markdown(
+        """
+        <div class="promo-card promo-betradar">
+            <div class="promo-card-title">🔴 PromoLive</div>
+            <div class="promo-card-text">
+                <b>Obiettivo:</b> individuare i ticket composti esattamente dalle
+                manifestazioni indicate, con filtro LIVE / PRE-MATCH.
+                <br><br>
+                Il ticket deve avere un numero di eventi pari al numero di
+                manifestazioni inserite, essere composto esattamente da quelle
+                manifestazioni e tutti gli eventi devono avere il valore
+                <b>flg_live</b> selezionato.
+                <br><br>
+                <b>Output:</b> ticket estratti e dettaglio completo degli eventi.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    data_vendita_da = st.date_input(
+        "Data vendita da",
+        value=None,
+        format="DD/MM/YYYY",
+        key="promolive_data_vendita_da",
+    )
+
+    ora_vendita_da = st.time_input(
+        "Ora vendita da",
+        value=time(0, 0),
+        key="promolive_ora_vendita_da",
+    )
+
+    manifestazione_input = st.text_area(
+        "Codici manifestazione separati da virgola",
+        value="",
+        key="promolive_manifestazione_input",
+        help=(
+            "Il ticket deve essere composto esattamente dalle manifestazioni "
+            "inserite e non deve contenere manifestazioni aggiuntive."
+        ),
+    )
+
+    flg_live = st.selectbox(
+        "Tipo evento - flg_live",
+        options=[0, 1],
+        format_func=lambda x: (
+            "0 - Pre-match"
+            if x == 0
+            else "1 - Live"
+        ),
+        index=1,
+        key="promolive_flg_live",
+    )
+
+    quota_min = st.number_input(
+        "Quota minima su tutti gli eventi",
+        min_value=0.0,
+        value=1.5,
+        step=0.1,
+        format="%.2f",
+        key="promolive_quota_min",
+    )
+
+    is_sistema = st.selectbox(
+        "Tipo ticket",
+        options=[0, 1],
+        format_func=lambda x: (
+            "Solo ticket singoli - is_sistema=0"
+            if x == 0
+            else "Solo sistemi - is_sistema=1"
+        ),
+        key="promolive_is_sistema",
+    )
+
+    cf_input = st.text_input(
+        "CF specifico opzionale",
+        value="",
+        key="promolive_cf_input",
+    )
+
+    mercato_input = st.text_input(
+        "Mercato opzionale - des_scom, separa più valori con virgola",
+        value="",
+        key="promolive_mercato_input",
+    )
+
+    importo_giocato_min = st.number_input(
+        "Importo Giocato minimo opzionale",
+        min_value=0.0,
+        value=0.0,
+        step=1.0,
+        format="%.2f",
+        key="promolive_importo_min",
+    )
+
+    importo_giocato_max = st.number_input(
+        "Importo Giocato massimo opzionale - lascia 0 per non applicare limite massimo",
+        min_value=0.0,
+        value=0.0,
+        step=1.0,
+        format="%.2f",
+        key="promolive_importo_max",
+    )
+
+    if st.button("Genera CSV PromoLive", key="genera_csv_promolive"):
+
+        if data_vendita_da is None:
+            st.error("Devi inserire una data vendita da cui iniziare l'estrazione.")
+            st.stop()
+
+        data_vendita_da_str = (
+            f"{data_vendita_da.strftime('%Y-%m-%d')} "
+            f"{ora_vendita_da.strftime('%H:%M:%S')}"
+        )
+
+        manifestazione_list = list(dict.fromkeys(
+            x.strip()
+            for x in manifestazione_input.split(",")
+            if x.strip()
+        ))
+
+        if not manifestazione_list:
+            st.error("Devi inserire almeno un codice manifestazione.")
+            st.stop()
+
+        mercato_list = list(dict.fromkeys(
+            x.strip()
+            for x in mercato_input.split(",")
+            if x.strip()
+        ))
+
+        promo_live.DATA_VENDITA_DA = data_vendita_da_str
+        promo_live.MANIFESTAZIONE_LIST = manifestazione_list
+        promo_live.FLG_LIVE = int(flg_live)
+        promo_live.QUOTA_MIN_TUTTI_EVENTI = float(quota_min)
+        promo_live.IS_SISTEMA = int(is_sistema)
+        promo_live.CF = (
+            cf_input.strip().upper()
+            if cf_input.strip()
+            else None
+        )
+        promo_live.DES_SCOM_LIST = (
+            mercato_list if mercato_list else None
+        )
+
+        st.info("Estrazione dati PromoLive in corso...")
+
+        st.write(f"Data vendita da: {promo_live.DATA_VENDITA_DA}")
+        st.write(
+            f"Manifestazioni richieste: {', '.join(manifestazione_list)}"
+        )
+        st.write(
+            f"Numero eventi richiesto: {len(manifestazione_list)}"
+        )
+        st.write(
+            f"flg_live: {promo_live.FLG_LIVE} "
+            f"({'LIVE' if promo_live.FLG_LIVE == 1 else 'PRE-MATCH'})"
+        )
+        st.write(
+            f"Quota minima: {promo_live.QUOTA_MIN_TUTTI_EVENTI}"
+        )
+        st.write(f"is_sistema: {promo_live.IS_SISTEMA}")
+        st.write(
+            f"Mercato: {promo_live.DES_SCOM_LIST or 'TUTTI'}"
+        )
+
+        if promo_live.CF:
+            st.write(f"CF filtrato: {promo_live.CF}")
+
+        if importo_giocato_min > 0:
+            st.write(f"Importo Giocato minimo: {importo_giocato_min}")
+
+        if importo_giocato_max > 0:
+            st.write(f"Importo Giocato massimo: {importo_giocato_max}")
+
+        try:
+            ticket_cf, dettaglio = promo_live.esegui_estrazione()
+        except Exception as e:
+            st.error("Errore durante l'estrazione PromoLive.")
+            st.exception(e)
+            st.stop()
+
+        if ticket_cf is None or ticket_cf.empty:
+            st.warning("Nessun ticket trovato con i filtri impostati.")
+            st.stop()
+
+        if importo_giocato_min > 0:
+            ticket_validi = ticket_cf.loc[
+                ticket_cf["Importo Giocato"] >= float(importo_giocato_min),
+                "id_ticket",
+            ]
+            ticket_cf = ticket_cf[
+                ticket_cf["id_ticket"].isin(ticket_validi)
+            ].copy()
+            dettaglio = dettaglio[
+                dettaglio["id_ticket"].isin(ticket_validi)
+            ].copy()
+
+        if importo_giocato_max > 0:
+            ticket_validi = ticket_cf.loc[
+                ticket_cf["Importo Giocato"] <= float(importo_giocato_max),
+                "id_ticket",
+            ]
+            ticket_cf = ticket_cf[
+                ticket_cf["id_ticket"].isin(ticket_validi)
+            ].copy()
+            dettaglio = dettaglio[
+                dettaglio["id_ticket"].isin(ticket_validi)
+            ].copy()
+
+        if ticket_cf.empty:
+            st.warning(
+                "Nessun ticket trovato dopo il filtro Importo Giocato."
+            )
+            st.stop()
+
+        st.success(
+            f"Ticket trovati: {ticket_cf['id_ticket'].nunique()}"
+        )
+        st.write(f"CF trovati: {ticket_cf['cf'].nunique()}")
+        st.write(
+            "Punti vendita trovati: "
+            f"{ticket_cf['nome_commerciale'].nunique()}"
+        )
+
+        st.subheader("Ticket estratti")
+        st.dataframe(ticket_cf, use_container_width=True)
+
+        csv_ticket = ticket_cf.to_csv(
+            sep=";",
+            index=False,
+            decimal=",",
+        ).encode("utf-8-sig")
+
+        st.download_button(
+            label="Scarica CSV ticket PromoLive",
+            data=csv_ticket,
+            file_name="1_promolive_ticket_cf_filtrati.csv",
+            mime="text/csv",
+        )
+
+        st.subheader("Dettaglio eventi")
+        st.dataframe(dettaglio, use_container_width=True)
+
+        csv_dettaglio = dettaglio.to_csv(
+            sep=";",
+            index=False,
+            decimal=",",
+        ).encode("utf-8-sig")
+
+        st.download_button(
+            label="Scarica CSV dettaglio eventi PromoLive",
+            data=csv_dettaglio,
+            file_name="2_promolive_dettaglio_eventi_filtrati.csv",
+            mime="text/csv",
+        )
+
+
+# =========================================================
+# PROMO 3 - 3moreEvents
 # =========================================================
 
 elif promozione_selezionata == "🎟️ 3moreEvents":
@@ -491,8 +758,8 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
                 La quota minima deve essere rispettata da <b>tutti gli eventi</b>
                 del ticket. È possibile anche impostare una quota minima
                 complessiva del ticket, calcolata come prodotto delle quote
-                evento. È inoltre possibile filtrare sport, manifestazioni, mercato,
-                tipo ticket, CF e importo giocato.
+                evento. È inoltre possibile filtrare sport, codici
+                manifestazione, mercato, tipo ticket, CF e importo giocato.
             </div>
         </div>
         """,
@@ -569,9 +836,8 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
         value="",
         key="3more_manifestazione",
         help=(
-            "Il ticket viene accettato solo se tutte le manifestazioni dei suoi "
-            "eventi appartengono all’elenco inserito. Le manifestazioni "
-            "possono ripetersi e non devono essere presenti tutte."
+            "Il ticket viene accettato se almeno un evento contiene una delle "
+            "manifestazioni inserite."
         ),
     )
 
@@ -698,7 +964,7 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             st.write(f"Importo Giocato massimo: {importo_giocato_max}")
 
         try:
-            ticket_cf, dettaglio, pagato_op = promo_3moreevents.esegui_estrazione()
+            ticket_cf, dettaglio = promo_3moreevents.esegui_estrazione()
         except Exception as e:
             st.error("Errore durante l'estrazione 3moreEvents.")
             st.exception(e)
@@ -719,9 +985,6 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             dettaglio = dettaglio[
                 dettaglio["id_ticket"].isin(ticket_validi)
             ].copy()
-            pagato_op = pagato_op[
-                pagato_op["id_ticket"].isin(ticket_validi)
-            ].copy()
 
         if importo_giocato_max > 0:
             ticket_validi = ticket_cf.loc[
@@ -733,9 +996,6 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
             ].copy()
             dettaglio = dettaglio[
                 dettaglio["id_ticket"].isin(ticket_validi)
-            ].copy()
-            pagato_op = pagato_op[
-                pagato_op["id_ticket"].isin(ticket_validi)
             ].copy()
 
         if ticket_cf.empty:
@@ -782,29 +1042,8 @@ elif promozione_selezionata == "🎟️ 3moreEvents":
         )
 
 
-        st.subheader("Ticket pagati con almeno un evento OP")
-        st.write(
-            "Una riga per ticket con des_stato = PAGATO "
-            "e almeno un evento con cod_stato_esito = OP."
-        )
-        st.dataframe(pagato_op, use_container_width=True)
-
-        csv_pagato_op = pagato_op.to_csv(
-            sep=";",
-            index=False,
-            decimal=",",
-        ).encode("utf-8-sig")
-
-        st.download_button(
-            label="Scarica CSV ticket pagati con evento OP",
-            data=csv_pagato_op,
-            file_name="3_3moreEvents_pagato_op.csv",
-            mime="text/csv",
-        )
-
-
 # =========================================================
-# PROMO 3 - 5evetsWin
+# PROMO 4 - 5evetsWin
 # =========================================================
 
 elif promozione_selezionata == "🏆 5evetsWin":
