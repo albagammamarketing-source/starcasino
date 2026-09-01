@@ -170,8 +170,7 @@ def costruisci_query() -> tuple[str, list[object]]:
         )
         params.extend(des_scom_list)
 
-    where_sql = "
-        AND ".join(where_clauses)
+    where_sql = "\n        AND ".join(where_clauses)
 
     query = f"""
         SELECT
