@@ -39,6 +39,9 @@ DB_CONFIG = {
 DATA_VENDITA_DA = "2026-05-01 00:00:00"
 
 DES_STATO = None
+
+# PromoLive estrae SOLO ticket singoli.
+# Questo valore resta a 0.
 IS_SISTEMA = 0
 
 # Elenco dei codici manifestazione richiesti.
@@ -101,18 +104,16 @@ def _lista_pulita(valori) -> list[str]:
 
 def costruisci_query() -> tuple[str, list[object]]:
     """
-    Estrae SOLO ticket composti esattamente dalle manifestazioni inserite.
+    Estrae ticket PromoLive con queste regole:
 
-    Esempio:
-    MANIFESTAZIONE_LIST = ["1001", "1002", "1003"]
-
-    Il ticket deve avere:
-    - tg.num_eventi = 3
-    - esattamente 3 righe/eventi in Ticket_Detail
-    - tutte le righe con manifestazione appartenente a 1001/1002/1003
-    - esattamente 3 manifestazioni distinte
-    - nessuna manifestazione diversa o aggiuntiva
-    - tutti gli eventi con flg_live = FLG_LIVE
+    - SOLO ticket singoli: tg.is_sistema = 0
+    - dalla data impostata in poi
+    - filtro flg_live = 0 oppure 1
+    - almeno UNA delle manifestazioni indicate deve essere presente nel ticket
+    - NON è necessario che tutte le manifestazioni inserite siano presenti
+    - il ticket può contenere anche altre manifestazioni
+    - eventuale filtro CF
+    - eventuale filtro mercato
     """
 
     manifestazione_list = _lista_pulita(MANIFESTAZIONE_LIST)
@@ -120,7 +121,6 @@ def costruisci_query() -> tuple[str, list[object]]:
     if not manifestazione_list:
         raise ValueError("Devi inserire almeno un codice manifestazione.")
 
-    num_eventi_attesi = len(manifestazione_list)
     col_data = "STR_TO_DATE(tg.data_ora_vend, '%%Y%%m%%d %%H:%%i:%%s')"
     placeholders = ",".join(["%s"] * len(manifestazione_list))
 
@@ -128,8 +128,9 @@ def costruisci_query() -> tuple[str, list[object]]:
         "tg.data_ora_vend IS NOT NULL",
         "tg.data_ora_vend <> ''",
         f"{col_data} >= %s",
-        "tg.num_eventi = %s",
-        "tg.is_sistema = %s",
+
+        # PromoLive: SOLO ticket singoli
+        "tg.is_sistema = 0",
 
         # Tutti gli eventi del ticket devono avere il flg_live selezionato.
         """
@@ -141,40 +142,23 @@ def costruisci_query() -> tuple[str, list[object]]:
         )
         """,
 
-        # Il ticket deve essere composto ESATTAMENTE dalle manifestazioni indicate.
+        # Basta che almeno UNA delle manifestazioni richieste sia presente.
         f"""
-        tg.id_ticket IN (
-            SELECT td_match.id_ticket
-            FROM Ticket_Detail td_match
-            GROUP BY td_match.id_ticket
-            HAVING
-                COUNT(*) = %s
-                AND COUNT(
-                    DISTINCT TRIM(CAST(td_match.manifestazione AS CHAR))
-                ) = %s
-                AND SUM(
-                    CASE
-                        WHEN TRIM(CAST(td_match.manifestazione AS CHAR))
-                            IN ({placeholders})
-                        THEN 1
-                        ELSE 0
-                    END
-                ) = %s
+        EXISTS (
+            SELECT 1
+            FROM Ticket_Detail td_manif
+            WHERE td_manif.id_ticket = tg.id_ticket
+              AND TRIM(CAST(td_manif.manifestazione AS CHAR))
+                  IN ({placeholders})
         )
         """
     ]
 
     params: list[object] = [
         DATA_VENDITA_DA,
-        num_eventi_attesi,
-        int(IS_SISTEMA),
         int(FLG_LIVE),
-        num_eventi_attesi,
-        num_eventi_attesi,
     ]
-
     params.extend(manifestazione_list)
-    params.append(num_eventi_attesi)
 
     if DES_STATO:
         where_clauses.append("tg.des_stato = %s")
@@ -208,7 +192,8 @@ def costruisci_query() -> tuple[str, list[object]]:
 
         params.extend(des_scom_list)
 
-    where_sql = "\n        AND ".join(where_clauses)
+    where_sql = "
+        AND ".join(where_clauses)
 
     query = f"""
         SELECT
@@ -571,13 +556,10 @@ def main() -> None:
     print(f"Database: {DB_CONFIG['database']}")
     print(f"Data vendita da: {DATA_VENDITA_DA}")
     print(f"Manifestazioni: {MANIFESTAZIONE_LIST or 'NESSUNA'}")
-    print(
-        "Numero eventi esatto: "
-        f"{len(_lista_pulita(MANIFESTAZIONE_LIST))}"
-    )
+    print("Regola manifestazioni: almeno una presente")
     print(f"flg_live: {FLG_LIVE}")
     print(f"Filtro stato ticket: {DES_STATO or 'TUTTI'}")
-    print(f"Filtro is_sistema: {IS_SISTEMA}")
+    print("Filtro is_sistema: 0 - SOLO SINGOLE")
     print(
         "Quota minima su tutti gli eventi: "
         f"{QUOTA_MIN_TUTTI_EVENTI}"
