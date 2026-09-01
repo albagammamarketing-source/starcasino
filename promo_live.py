@@ -39,14 +39,11 @@ DB_CONFIG = {
 DATA_VENDITA_DA = "2026-05-01 00:00:00"
 
 DES_STATO = None
-
-# PromoLive estrae SOLO ticket singoli.
-# Questo valore resta a 0.
 IS_SISTEMA = 0
 
-# Elenco dei codici manifestazione richiesti.
-# La logica è equivalente alla Promo Betradar attuale:
-# il ticket deve essere composto ESATTAMENTE dalle manifestazioni inserite.
+# Elenco dei codici manifestazione ammessi.
+# PromoLive estrae ticket con UN SOLO EVENTO.
+# L'unica manifestazione del ticket deve essere una di quelle inserite.
 MANIFESTAZIONE_LIST = None
 
 # 0 = pre-match
@@ -104,14 +101,14 @@ def _lista_pulita(valori) -> list[str]:
 
 def costruisci_query() -> tuple[str, list[object]]:
     """
-    Estrae ticket PromoLive con queste regole:
+    PromoLive:
 
     - SOLO ticket singoli: tg.is_sistema = 0
-    - dalla data impostata in poi
-    - filtro flg_live = 0 oppure 1
-    - almeno UNA delle manifestazioni indicate deve essere presente nel ticket
-    - NON è necessario che tutte le manifestazioni inserite siano presenti
-    - il ticket può contenere anche altre manifestazioni
+    - SOLO ticket con un evento: tg.num_eventi = 1
+    - l'unico evento deve avere manifestazione compresa in MANIFESTAZIONE_LIST
+    - con più codici manifestazione si applica una logica OR:
+      es. [309, 4774] -> manifestazione 309 OPPURE 4774
+    - flg_live deve essere uguale al valore selezionato
     - eventuale filtro CF
     - eventuale filtro mercato
     """
@@ -129,28 +126,18 @@ def costruisci_query() -> tuple[str, list[object]]:
         "tg.data_ora_vend <> ''",
         f"{col_data} >= %s",
 
-        # PromoLive: SOLO ticket singoli
+        # PromoLive: solo singole e un solo evento.
         "tg.is_sistema = 0",
+        "tg.num_eventi = 1",
 
-        # Tutti gli eventi del ticket devono avere il flg_live selezionato.
-        """
-        NOT EXISTS (
-            SELECT 1
-            FROM Ticket_Detail td_live
-            WHERE td_live.id_ticket = tg.id_ticket
-              AND COALESCE(td_live.flg_live, -1) <> %s
-        )
-        """,
+        # L'unica riga evento deve essere LIVE / PRE-MATCH
+        # secondo il valore scelto.
+        "COALESCE(td.flg_live, -1) = %s",
 
-        # Basta che almeno UNA delle manifestazioni richieste sia presente.
+        # Con più manifestazioni è un OR tramite IN (...).
         f"""
-        EXISTS (
-            SELECT 1
-            FROM Ticket_Detail td_manif
-            WHERE td_manif.id_ticket = tg.id_ticket
-              AND TRIM(CAST(td_manif.manifestazione AS CHAR))
-                  IN ({placeholders})
-        )
+        TRIM(CAST(td.manifestazione AS CHAR))
+            IN ({placeholders})
         """
     ]
 
@@ -173,23 +160,14 @@ def costruisci_query() -> tuple[str, list[object]]:
     if des_scom_list:
         mercato_placeholders = ",".join(["%s"] * len(des_scom_list))
 
+        # Poiché num_eventi = 1, basta filtrare direttamente
+        # il mercato dell'unico evento.
         where_clauses.append(
             f"""
-            tg.id_ticket IN (
-                SELECT td_scom.id_ticket
-                FROM Ticket_Detail td_scom
-                GROUP BY td_scom.id_ticket
-                HAVING
-                    COUNT(
-                        DISTINCT TRIM(COALESCE(td_scom.des_scom, ''))
-                    ) = 1
-                    AND MAX(
-                        TRIM(COALESCE(td_scom.des_scom, ''))
-                    ) IN ({mercato_placeholders})
-            )
+            TRIM(COALESCE(td.des_scom, ''))
+                IN ({mercato_placeholders})
             """
         )
-
         params.extend(des_scom_list)
 
     where_sql = "
@@ -556,10 +534,10 @@ def main() -> None:
     print(f"Database: {DB_CONFIG['database']}")
     print(f"Data vendita da: {DATA_VENDITA_DA}")
     print(f"Manifestazioni: {MANIFESTAZIONE_LIST or 'NESSUNA'}")
-    print("Regola manifestazioni: almeno una presente")
+    print("Numero eventi esatto: 1")
     print(f"flg_live: {FLG_LIVE}")
     print(f"Filtro stato ticket: {DES_STATO or 'TUTTI'}")
-    print("Filtro is_sistema: 0 - SOLO SINGOLE")
+    print(f"Filtro is_sistema: {IS_SISTEMA}")
     print(
         "Quota minima su tutti gli eventi: "
         f"{QUOTA_MIN_TUTTI_EVENTI}"
