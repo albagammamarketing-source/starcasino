@@ -345,6 +345,48 @@ def applica_filtro_quota_tutti_eventi(
 
 
 # =========================================================
+# PRIMO TICKET PER CF
+# =========================================================
+
+def mantieni_primo_ticket_per_cf(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Dopo aver applicato tutti i filtri PromoLive, mantiene solo
+    il primo ticket cronologico per ogni CF, usando data_ora_vend.
+
+    Esempio:
+    CF A -> ticket 01/08, 03/08, 05/08 -> mantiene 01/08.
+    """
+
+    if df.empty:
+        return df.copy()
+
+    df = df.copy()
+
+    # data_ora_vend nel DB è nel formato YYYYMMDD HH:MM:SS.
+    df["_data_ora_vend_dt"] = pd.to_datetime(
+        df["data_ora_vend"],
+        format="%Y%m%d %H:%M:%S",
+        errors="coerce",
+    )
+
+    # Per evitare risultati casuali in caso di stessa data/ora,
+    # id_ticket viene usato come secondo criterio stabile.
+    df = df.sort_values(
+        by=["cf", "_data_ora_vend_dt", "id_ticket"],
+        ascending=[True, True, True],
+        na_position="last",
+    )
+
+    primi_ticket = (
+        df.drop_duplicates(subset=["cf"], keep="first")["id_ticket"]
+    )
+
+    df = df[df["id_ticket"].isin(primi_ticket)].copy()
+
+    return df.drop(columns=["_data_ora_vend_dt"], errors="ignore")
+
+
+# =========================================================
 # OUTPUT
 # =========================================================
 
@@ -517,6 +559,10 @@ def esegui_estrazione() -> tuple[pd.DataFrame, pd.DataFrame]:
     df = normalizza_output(df)
     df = applica_filtro_quota_tutti_eventi(df)
 
+    # Dopo tutti i filtri PromoLive, conserva solo
+    # il primo ticket cronologico per ogni CF.
+    df = mantieni_primo_ticket_per_cf(df)
+
     if df.empty:
         return (
             crea_output_ticket(df),
@@ -565,6 +611,7 @@ def main() -> None:
     )
     print(f"Mercato: {DES_SCOM_LIST or 'TUTTI'}")
     print(f"CF: {CF or 'TUTTI'}")
+    print("Regola CF: solo primo ticket cronologico per CF")
 
     ticket, dettaglio = esegui_estrazione()
 
