@@ -734,7 +734,17 @@ elif promozione_selezionata == "🔴 PromoLive":
         )
 
         st.subheader("Ticket estratti")
-        st.dataframe(ticket_cf, use_container_width=True)
+
+        st.dataframe(
+            ticket_cf,
+            use_container_width=True,
+            column_config={
+                "Quota": st.column_config.NumberColumn(
+                    "Quota",
+                    format="%.2f",
+                ),
+            },
+        )
 
         csv_ticket = ticket_cf.to_csv(
             sep=";",
