@@ -360,6 +360,7 @@ def crea_output_ticket(df: pd.DataFrame) -> pd.DataFrame:
         "flg_live",
         "Manifestazioni",
         "Mercato",
+        "Quota",
         "Importo Giocato",
         "Importo Vincita Potenziale",
     ]
@@ -395,6 +396,7 @@ def crea_output_ticket(df: pd.DataFrame) -> pd.DataFrame:
                 "num_eventi",
                 "flg_live",
                 "des_scom",
+                "quota_evento",
                 "importo_pagato",
                 "importo_vincita_potenziale",
             ]
@@ -415,6 +417,7 @@ def crea_output_ticket(df: pd.DataFrame) -> pd.DataFrame:
     ticket = ticket.rename(
         columns={
             "des_scom": "Mercato",
+            "quota_evento": "Quota",
             "importo_pagato": "Importo Giocato",
             "importo_vincita_potenziale":
                 "Importo Vincita Potenziale",
@@ -440,7 +443,7 @@ def crea_output_dettaglio(df: pd.DataFrame) -> pd.DataFrame:
         "des_manif",
         "Mercato",
         "des_eve",
-        "quota_evento",
+        "Quota",
         "cod_stato_esito",
         "Importo Giocato",
         "Importo Vincita Potenziale",
@@ -475,6 +478,7 @@ def crea_output_dettaglio(df: pd.DataFrame) -> pd.DataFrame:
     dettaglio = dettaglio.rename(
         columns={
             "des_scom": "Mercato",
+            "quota_evento": "Quota",
             "importo_pagato": "Importo Giocato",
             "importo_vincita_potenziale":
                 "Importo Vincita Potenziale",
