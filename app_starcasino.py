@@ -486,15 +486,19 @@ elif promozione_selezionata == "🔴 PromoLive":
         <div class="promo-card promo-betradar">
             <div class="promo-card-title">🔴 PromoLive</div>
             <div class="promo-card-text">
-                <b>Obiettivo:</b> individuare i ticket composti esattamente dalle
-                manifestazioni indicate, con filtro LIVE / PRE-MATCH.
+                <b>Obiettivo:</b> individuare ticket singoli con un solo evento,
+                appartenente a una delle manifestazioni indicate, con filtro
+                LIVE / PRE-MATCH e filtro Sport.
                 <br><br>
-                Il ticket deve avere un numero di eventi pari al numero di
-                manifestazioni inserite, essere composto esattamente da quelle
-                manifestazioni e tutti gli eventi devono avere il valore
-                <b>flg_live</b> selezionato.
+                <b>Regola:</b> vengono estratti esclusivamente ticket con
+                <b>is_sistema = 0</b> e <b>num_eventi = 1</b>.
+                L'unica manifestazione del ticket deve essere una delle
+                manifestazioni inserite nella lista.
                 <br><br>
-                <b>Output:</b> ticket estratti e dettaglio completo degli eventi.
+                Esempio: inserendo <b>309,4774</b>, vengono estratti ticket
+                con un solo evento avente manifestazione <b>309 oppure 4774</b>.
+                <br><br>
+                <b>Output:</b> ticket estratti e dettaglio dell'unico evento.
             </div>
         </div>
         """,
@@ -519,8 +523,9 @@ elif promozione_selezionata == "🔴 PromoLive":
         value="",
         key="promolive_manifestazione_input",
         help=(
-            "Il ticket deve essere composto esattamente dalle manifestazioni "
-            "inserite e non deve contenere manifestazioni aggiuntive."
+            "Inserisci uno o più codici. Il ticket deve avere un solo evento "
+            "e la manifestazione deve essere una di quelle indicate. "
+            "Esempio: 309,4774 significa 309 OPPURE 4774."
         ),
     )
 
@@ -536,24 +541,37 @@ elif promozione_selezionata == "🔴 PromoLive":
         key="promolive_flg_live",
     )
 
+    sport_selezionati = st.multiselect(
+        "Sport",
+        options=[
+            "CALCIO",
+            "TENNIS",
+            "BASKET",
+            "PALLAVOLO",
+            "HOCKEY",
+            "BASEBALL",
+            "RUGBY",
+            "ALTRO",
+        ],
+        default=["CALCIO"],
+        key="promolive_sport",
+        help=(
+            "Seleziona uno o più sport. Con più sport viene applicata "
+            "una logica OR. Default: CALCIO."
+        ),
+    )
+
     quota_min = st.number_input(
-        "Quota minima su tutti gli eventi",
+        "Quota minima evento",
         min_value=0.0,
         value=1.5,
         step=0.1,
         format="%.2f",
         key="promolive_quota_min",
-    )
-
-    is_sistema = st.selectbox(
-        "Tipo ticket",
-        options=[0, 1],
-        format_func=lambda x: (
-            "Solo ticket singoli - is_sistema=0"
-            if x == 0
-            else "Solo sistemi - is_sistema=1"
+        help=(
+            "PromoLive estrae ticket con un solo evento, quindi la quota "
+            "minima si applica a quell'unico evento."
         ),
-        key="promolive_is_sistema",
     )
 
     cf_input = st.text_input(
@@ -566,6 +584,10 @@ elif promozione_selezionata == "🔴 PromoLive":
         "Mercato opzionale - des_scom, separa più valori con virgola",
         value="",
         key="promolive_mercato_input",
+        help=(
+            "Con più mercati viene applicata una logica OR: l'unico evento "
+            "deve avere uno dei mercati indicati."
+        ),
     )
 
     importo_giocato_min = st.number_input(
@@ -616,8 +638,11 @@ elif promozione_selezionata == "🔴 PromoLive":
         promo_live.DATA_VENDITA_DA = data_vendita_da_str
         promo_live.MANIFESTAZIONE_LIST = manifestazione_list
         promo_live.FLG_LIVE = int(flg_live)
+        promo_live.DES_SPORT_LIST = (
+            sport_selezionati if sport_selezionati else None
+        )
         promo_live.QUOTA_MIN_TUTTI_EVENTI = float(quota_min)
-        promo_live.IS_SISTEMA = int(is_sistema)
+        promo_live.IS_SISTEMA = 0
         promo_live.CF = (
             cf_input.strip().upper()
             if cf_input.strip()
@@ -631,19 +656,20 @@ elif promozione_selezionata == "🔴 PromoLive":
 
         st.write(f"Data vendita da: {promo_live.DATA_VENDITA_DA}")
         st.write(
-            f"Manifestazioni richieste: {', '.join(manifestazione_list)}"
+            f"Manifestazioni ammesse: {', '.join(manifestazione_list)}"
         )
-        st.write(
-            f"Numero eventi richiesto: {len(manifestazione_list)}"
-        )
+        st.write("Numero eventi richiesto: 1")
+        st.write("Tipo ticket: singola - is_sistema = 0")
         st.write(
             f"flg_live: {promo_live.FLG_LIVE} "
             f"({'LIVE' if promo_live.FLG_LIVE == 1 else 'PRE-MATCH'})"
         )
         st.write(
-            f"Quota minima: {promo_live.QUOTA_MIN_TUTTI_EVENTI}"
+            f"Sport: {promo_live.DES_SPORT_LIST or 'TUTTI'}"
         )
-        st.write(f"is_sistema: {promo_live.IS_SISTEMA}")
+        st.write(
+            f"Quota minima evento: {promo_live.QUOTA_MIN_TUTTI_EVENTI}"
+        )
         st.write(
             f"Mercato: {promo_live.DES_SCOM_LIST or 'TUTTI'}"
         )
@@ -723,7 +749,7 @@ elif promozione_selezionata == "🔴 PromoLive":
             mime="text/csv",
         )
 
-        st.subheader("Dettaglio eventi")
+        st.subheader("Dettaglio evento")
         st.dataframe(dettaglio, use_container_width=True)
 
         csv_dettaglio = dettaglio.to_csv(
@@ -733,7 +759,7 @@ elif promozione_selezionata == "🔴 PromoLive":
         ).encode("utf-8-sig")
 
         st.download_button(
-            label="Scarica CSV dettaglio eventi PromoLive",
+            label="Scarica CSV dettaglio evento PromoLive",
             data=csv_dettaglio,
             file_name="2_promolive_dettaglio_eventi_filtrati.csv",
             mime="text/csv",

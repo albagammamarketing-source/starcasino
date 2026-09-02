@@ -46,6 +46,10 @@ IS_SISTEMA = 0
 # L'unica manifestazione del ticket deve essere una di quelle inserite.
 MANIFESTAZIONE_LIST = None
 
+# Sport ammessi. Default: CALCIO.
+# Con più valori viene applicata una logica OR.
+DES_SPORT_LIST = ["CALCIO"]
+
 # 0 = pre-match
 # 1 = live
 FLG_LIVE = 1
@@ -109,6 +113,7 @@ def costruisci_query() -> tuple[str, list[object]]:
     - con più codici manifestazione si applica una logica OR:
       es. [309, 4774] -> manifestazione 309 OPPURE 4774
     - flg_live deve essere uguale al valore selezionato
+    - des_sport deve essere uno degli sport selezionati
     - eventuale filtro CF
     - eventuale filtro mercato
     """
@@ -146,6 +151,18 @@ def costruisci_query() -> tuple[str, list[object]]:
         int(FLG_LIVE),
     ]
     params.extend(manifestazione_list)
+
+
+    sport_list = [x.upper() for x in _lista_pulita(DES_SPORT_LIST)]
+    if sport_list:
+        sport_placeholders = ",".join(["%s"] * len(sport_list))
+        where_clauses.append(
+            f"""
+            UPPER(TRIM(COALESCE(td.des_sport, '')))
+                IN ({sport_placeholders})
+            """
+        )
+        params.extend(sport_list)
 
     if DES_STATO:
         where_clauses.append("tg.des_stato = %s")
@@ -535,6 +552,7 @@ def main() -> None:
     print(f"Manifestazioni: {MANIFESTAZIONE_LIST or 'NESSUNA'}")
     print("Numero eventi esatto: 1")
     print(f"flg_live: {FLG_LIVE}")
+    print(f"Sport: {DES_SPORT_LIST or 'TUTTI'}")
     print(f"Filtro stato ticket: {DES_STATO or 'TUTTI'}")
     print(f"Filtro is_sistema: {IS_SISTEMA}")
     print(
