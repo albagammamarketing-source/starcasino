@@ -114,6 +114,7 @@ def costruisci_query() -> tuple[str, list[object]]:
       es. [309, 4774] -> manifestazione 309 OPPURE 4774
     - flg_live deve essere uguale al valore selezionato
     - des_sport deve essere uno degli sport selezionati
+    - Importo_bonus deve essere uguale a 0
     - eventuale filtro CF
     - eventuale filtro mercato
     """
@@ -134,6 +135,10 @@ def costruisci_query() -> tuple[str, list[object]]:
         # PromoLive: solo singole e un solo evento.
         "tg.is_sistema = 0",
         "tg.num_eventi = 1",
+
+        # Esclude i ticket giocati utilizzando bonus.
+        # Vengono considerati soltanto ticket con Importo_bonus = 0.
+        "COALESCE(tg.Importo_bonus, 0) = 0",
 
         # L'unica riga evento deve essere LIVE / PRE-MATCH
         # secondo il valore scelto.
@@ -604,6 +609,7 @@ def main() -> None:
     print(f"Sport: {DES_SPORT_LIST or 'TUTTI'}")
     print(f"Filtro stato ticket: {DES_STATO or 'TUTTI'}")
     print(f"Filtro is_sistema: {IS_SISTEMA}")
+    print("Filtro bonus: solo ticket con Importo_bonus = 0")
     print(
         "Quota minima su tutti gli eventi: "
         f"{QUOTA_MIN_TUTTI_EVENTI}"
